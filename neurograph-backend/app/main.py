@@ -1,605 +1,379 @@
 """
-NeuroGraph Knowledge Base - Real Backend Implementation
-Fully functional backend with actual ML/AI processing
+NeuroGraph V2 - FastAPI Backend Server
+Provides REST API endpoints for document processing, search, and knowledge graph
 """
 
-from fastapi import FastAPI, UploadFile, File, HTTPException, BackgroundTasks, Query
+from fastapi import FastAPI, UploadFile, File, HTTPException, Query, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, FileResponse
-from pydantic import BaseModel, Field
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
-import hashlib
-import json
 import os
-import uuid
+import tempfile
 import shutil
-from datetime import datetime
 from pathlib import Path
-import aiofiles
 
-# ML imports
-from sentence_transformers import SentenceTransformer
-import spacy
-import networkx as nx
-import numpy as np
-from sklearn.metrics.pairwise import cosine_similarity
-from PIL import Image
-import pytesseract
-from PyPDF2 import PdfReader
-from docx import Document
-import io
+from .engine import get_processor, DocumentProcessor
 
-app = FastAPI(title="NeuroGraph Knowledge Base API", version="1.0.0")
+app = FastAPI(
+    title="NeuroGraph V2 API",
+    description="Real ML/AI-powered Knowledge Graph Backend",
+    version="2.0.0"
+)
 
 # Enable CORS for frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],  # Configure appropriately for production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Configuration
-BASE_DIR = Path(__file__).parent.parent
-UPLOAD_DIR = BASE_DIR / "uploads"
-DATA_DIR = BASE_DIR / "data"
-UPLOAD_DIR.mkdir(exist_ok=True)
-DATA_DIR.mkdir(exist_ok=True)
-
-# Database file paths
-DOCUMENTS_DB = DATA_DIR / "documents.json"
-GRAPH_DB = DATA_DIR / "graph.json"
-EMBEDDINGS_DB = DATA_DIR / "embeddings.npy"
-
-# Global state (in production, use proper database)
-class AppState:
-    def __init__(self):
-        self.documents = []
-        self.graph_data = {"nodes": [], "edges": []}
-        self.embeddings = None
-        self.embedding_model = None
-        self.nlp_model = None
-        self.knowledge_graph = nx.Graph()
-        self.loaded = False
-    
-    def save(self):
-        """Persist state to disk"""
-        with open(DOCUMENTS_DB, 'w') as f:
-            json.dump(self.documents, f, indent=2, default=str)
-        with open(GRAPH_DB, 'w') as f:
-            graph_data = {
-                "nodes": list(self.knowledge_graph.nodes(data=True)),
-                "edges": list(self.knowledge_graph.edges(data=True))
-            }
-            json.dump(graph_data, f, indent=2, default=str)
-        if self.embeddings is not None:
-            np.save(EMBEDDINGS_DB, self.embeddings)
-    
-    def load(self):
-        """Load state from disk"""
-        if DOCUMENTS_DB.exists():
-            with open(DOCUMENTS_DB, 'r') as f:
-                self.documents = json.load(f)
-        if GRAPH_DB.exists():
-            with open(GRAPH_DB, 'r') as f:
-                graph_data = json.load(f)
-                self.knowledge_graph.clear()
-                for node, data in graph_data.get("nodes", []):
-                    self.knowledge_graph.add_node(node, **data)
-                for u, v, data in graph_data.get("edges", []):
-                    self.knowledge_graph.add_edge(u, v, **data)
-        if EMBEDDINGS_DB.exists():
-            self.embeddings = np.load(EMBEDDINGS_DB)
-        self.loaded = True
-
-state = AppState()
-
-# Pydantic models
-class DocumentInfo(BaseModel):
+# Request/Response models
+class DocumentResponse(BaseModel):
     id: str
     filename: str
-    filetype: str
-    size: int
-    hash: str
-    upload_date: str
-    status: str
+    file_hash: str
+    file_type: str
+    file_size: int
     language: str
-    ocr_applied: bool = False
-    content_preview: str = ""
-    entities: List[Dict[str, Any]] = []
-    embedding_id: Optional[int] = None
+    entity_count: int
+    concept_count: int
+    ocr_applied: bool
+    created_at: str
 
-class SearchResult(BaseModel):
-    document_id: str
-    filename: str
-    similarity_score: float
-    content_preview: str
-    matched_entities: List[str]
 
-class GraphNode(BaseModel):
-    id: str
-    label: str
-    type: str
-    size: float
-    color: str
+class SearchRequest(BaseModel):
+    query: str
+    top_k: int = 10
+    use_semantic: bool = True
 
-class GraphEdge(BaseModel):
-    source: str
-    target: str
-    type: str
-    weight: float
 
-class PipelineStatus(BaseModel):
-    step: str
-    status: str
-    progress: float
-    message: str
+class SearchResponse(BaseModel):
+    results: List[Dict[str, Any]]
+    total: int
 
-class ModelInfo(BaseModel):
-    name: str
-    type: str
-    status: str
-    size_mb: float
-    loaded: bool
 
-# Initialize ML models
-def load_models():
-    """Load ML models on startup"""
-    print("Loading sentence-transformers model...")
-    state.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
-    print("Loading spaCy NLP model...")
-    try:
-        state.nlp_model = spacy.load("en_core_web_sm")
-    except OSError:
-        print("Downloading en_core_web_sm...")
-        from spacy.cli import download
-        download("en_core_web_sm")
-        state.nlp_model = spacy.load("en_core_web_sm")
-    state.loaded = True
-    print("Models loaded successfully!")
+class GraphResponse(BaseModel):
+    nodes: List[Dict[str, Any]]
+    edges: List[Dict[str, Any]]
+    stats: Dict[str, Any]
 
-def generate_file_hash(file_content: bytes) -> str:
-    """Generate real SHA-256 hash of file content"""
-    return hashlib.sha256(file_content).hexdigest()
 
-def detect_language(text: str) -> str:
-    """Detect language of text using simple heuristics"""
-    # In production, use langdetect or similar
-    danish_chars = set('æøåÆØÅ')
-    has_danish = any(c in text for c in danish_chars)
-    
-    if has_danish:
-        return 'da'
-    
-    # Simple English detection
-    common_english_words = {'the', 'and', 'is', 'in', 'to', 'of', 'a', 'for', 'on', 'with'}
-    words = text.lower().split()[:100]
-    english_count = sum(1 for w in words if w in common_english_words)
-    
-    if english_count > 3:
-        return 'en'
-    
-    return 'mixed'
+class StatsResponse(BaseModel):
+    total_documents: int
+    total_concepts: int
+    total_entities: int
+    total_size_bytes: int
+    languages: Dict[str, int]
+    graph: Dict[str, Any]
 
-def extract_text_from_pdf(file_bytes: bytes) -> str:
-    """Extract text from PDF file"""
-    try:
-        pdf_reader = PdfReader(io.BytesIO(file_bytes))
-        text = ""
-        for page in pdf_reader.pages:
-            text += page.extract_text() + "\n"
-        return text
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=f"PDF extraction failed: {str(e)}")
 
-def extract_text_from_docx(file_bytes: bytes) -> str:
-    """Extract text from DOCX file"""
-    try:
-        doc = Document(io.BytesIO(file_bytes))
-        text = "\n".join([para.text for para in doc.paragraphs])
-        return text
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=f"DOCX extraction failed: {str(e)}")
+class EntityResponse(BaseModel):
+    entities: List[Dict[str, Any]]
+    concepts: List[str]
 
-def extract_text_from_image(file_bytes: bytes) -> str:
-    """Extract text from image using OCR"""
-    try:
-        image = Image.open(io.BytesIO(file_bytes))
-        text = pytesseract.image_to_string(image)
-        return text
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=f"OCR failed: {str(e)}")
-
-def extract_entities(text: str) -> List[Dict[str, Any]]:
-    """Extract named entities using spaCy"""
-    if not state.nlp_model:
-        return []
-    
-    doc = state.nlp_model(text[:10000])  # Limit text length
-    entities = []
-    
-    for ent in doc.ents:
-        entities.append({
-            "text": ent.text,
-            "label": ent.label_,
-            "start": ent.start_char,
-            "end": ent.end_char
-        })
-    
-    return entities
-
-def generate_embedding(text: str) -> np.ndarray:
-    """Generate sentence embedding using transformers"""
-    if not state.embedding_model:
-        raise HTTPException(status_code=503, detail="Embedding model not loaded")
-    
-    embedding = state.embedding_model.encode(text, convert_to_numpy=True)
-    return embedding
-
-def build_knowledge_graph(documents: List[Dict], embeddings: np.ndarray) -> None:
-    """Build knowledge graph from documents and their embeddings"""
-    state.knowledge_graph.clear()
-    
-    # Add document nodes
-    for doc in documents:
-        state.knowledge_graph.add_node(
-            doc['id'],
-            type='document',
-            label=doc['filename'],
-            size=15,
-            color='#4CAF50'
-        )
-    
-    # Calculate similarity and add edges
-    if len(embeddings) > 1:
-        similarity_matrix = cosine_similarity(embeddings)
-        
-        for i in range(len(documents)):
-            for j in range(i + 1, len(documents)):
-                similarity = similarity_matrix[i][j]
-                if similarity > 0.3:  # Threshold for connection
-                    state.knowledge_graph.add_edge(
-                        documents[i]['id'],
-                        documents[j]['id'],
-                        type='similarity',
-                        weight=float(similarity)
-                    )
-    
-    # Add entity nodes and connect to documents
-    for doc in documents:
-        for entity in doc.get('entities', []):
-            entity_id = f"entity_{entity['text'].lower().replace(' ', '_')}_{entity['label']}"
-            
-            if not state.knowledge_graph.has_node(entity_id):
-                state.knowledge_graph.add_node(
-                    entity_id,
-                    type='entity',
-                    label=entity['text'],
-                    entity_type=entity['label'],
-                    size=10,
-                    color='#2196F3'
-                )
-            
-            state.knowledge_graph.add_edge(
-                doc['id'],
-                entity_id,
-                type='contains_entity',
-                weight=1.0
-            )
-
-def search_similar(query: str, top_k: int = 10) -> List[SearchResult]:
-    """Search for similar documents using semantic similarity"""
-    if not state.embedding_model or state.embeddings is None or len(state.documents) == 0:
-        return []
-    
-    # Generate query embedding
-    query_embedding = state.embedding_model.encode(query, convert_to_numpy=True).reshape(1, -1)
-    
-    # Calculate similarities
-    similarities = cosine_similarity(query_embedding, state.embeddings)[0]
-    
-    # Get top-k results
-    top_indices = np.argsort(similarities)[::-1][:top_k]
-    
-    results = []
-    for idx in top_indices:
-        if similarities[idx] > 0.1:  # Minimum threshold
-            doc = state.documents[idx]
-            results.append(SearchResult(
-                document_id=doc['id'],
-                filename=doc['filename'],
-                similarity_score=float(similarities[idx]),
-                content_preview=doc.get('content_preview', '')[:200],
-                matched_entities=[e['text'] for e in doc.get('entities', [])[:5]]
-            ))
-    
-    return results
-
-@app.on_event("startup")
-async def startup_event():
-    """Initialize application on startup"""
-    state.load()
-    if state.documents:
-        load_models()
 
 @app.get("/")
 async def root():
-    return {"message": "NeuroGraph Knowledge Base API", "version": "1.0.0"}
-
-@app.get("/api/status")
-async def get_status():
-    """Get system status"""
+    """API health check"""
     return {
-        "documents_count": len(state.documents),
-        "graph_nodes": state.knowledge_graph.number_of_nodes(),
-        "graph_edges": state.knowledge_graph.number_of_edges(),
-        "models_loaded": state.loaded,
-        "storage_used_mb": sum(os.path.getsize(f) for f in UPLOAD_DIR.glob("*")) / (1024 * 1024) if UPLOAD_DIR.exists() else 0
+        "status": "healthy",
+        "version": "2.0.0",
+        "message": "NeuroGraph V2 Backend - Real ML/AI Processing"
     }
 
-@app.post("/api/upload", response_model=DocumentInfo)
-async def upload_document(background_tasks: BackgroundTasks, file: UploadFile = File(...)):
-    """Upload and process a document"""
+
+@app.post("/api/upload", response_model=DocumentResponse)
+async def upload_document(file: UploadFile = File(...)):
+    """
+    Upload and process a document
     
-    # Read file content
-    content = await file.read()
-    file_size = len(content)
+    - Extracts text (PDF, DOCX, images with OCR)
+    - Detects language
+    - Extracts entities and concepts
+    - Generates semantic embeddings
+    - Adds to knowledge graph
+    """
+    processor = get_processor()
     
-    # Generate real hash
-    file_hash = generate_file_hash(content)
-    
-    # Check for duplicates
-    for doc in state.documents:
-        if doc['hash'] == file_hash:
-            raise HTTPException(status_code=409, detail="Duplicate file already exists")
-    
-    # Determine file type
-    filename = file.filename or "unknown"
-    ext = filename.split('.')[-1].lower()
-    filetype_map = {
-        'pdf': 'pdf',
-        'docx': 'document',
-        'doc': 'document',
-        'txt': 'text',
-        'png': 'image',
-        'jpg': 'image',
-        'jpeg': 'image',
-        'gif': 'image',
-        'bmp': 'image'
-    }
-    filetype = filetype_map.get(ext, 'other')
-    
-    # Save file
-    file_id = str(uuid.uuid4())
-    file_path = UPLOAD_DIR / f"{file_id}_{filename}"
-    async with aiofiles.open(file_path, 'wb') as out_file:
-        await out_file.write(content)
-    
-    # Extract text based on file type
-    ocr_applied = False
-    text_content = ""
+    # Save uploaded file temporarily
+    with tempfile.NamedTemporaryFile(delete=False, suffix=Path(file.filename).suffix) as tmp:
+        content = await file.read()
+        tmp.write(content)
+        tmp_path = tmp.name
     
     try:
-        if filetype == 'pdf':
-            text_content = extract_text_from_pdf(content)
-        elif filetype == 'document':
-            if ext == 'docx':
-                text_content = extract_text_from_docx(content)
-            else:
-                text_content = content.decode('utf-8', errors='ignore')
-        elif filetype == 'text':
-            text_content = content.decode('utf-8', errors='ignore')
-        elif filetype == 'image':
-            text_content = extract_text_from_image(content)
-            ocr_applied = True
+        # Process the file
+        doc = processor.process_file(tmp_path)
+        
+        return DocumentResponse(
+            id=doc.id,
+            filename=doc.filename,
+            file_hash=doc.file_hash,
+            file_type=doc.file_type,
+            file_size=doc.file_size,
+            language=doc.language,
+            entity_count=len(doc.entities),
+            concept_count=len(doc.concepts),
+            ocr_applied=doc.ocr_applied,
+            created_at=doc.created_at
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        # Continue without text extraction
-        text_content = f"[Could not extract text: {str(e)}]"
-    
-    # Detect language
-    language = detect_language(text_content) if text_content else 'unknown'
-    
-    # Extract entities
-    entities = extract_entities(text_content) if text_content and state.nlp_model else []
-    
-    # Generate embedding
-    embedding = None
-    if text_content and state.embedding_model:
-        embedding = generate_embedding(text_content[:5000])  # Limit length
-    
-    # Create document record
-    doc_info = DocumentInfo(
-        id=file_id,
-        filename=filename,
-        filetype=filetype,
-        size=file_size,
-        hash=file_hash,
-        upload_date=datetime.now().isoformat(),
-        status="processed",
-        language=language,
-        ocr_applied=ocr_applied,
-        content_preview=text_content[:500] if text_content else "",
-        entities=entities
-    )
-    
-    # Update state
-    state.documents.append(doc_info.dict())
-    
-    # Update embeddings
-    if embedding is not None:
-        if state.embeddings is None:
-            state.embeddings = embedding.reshape(1, -1)
-        else:
-            state.embeddings = np.vstack([state.embeddings, embedding.reshape(1, -1)])
-        doc_info.embedding_id = len(state.documents) - 1
-    
-    # Rebuild knowledge graph
-    if state.embeddings is not None:
-        build_knowledge_graph(state.documents, state.embeddings)
-    
-    # Save state
-    background_tasks.add_task(state.save)
-    
-    return doc_info
+        raise HTTPException(status_code=500, detail=f"Processing failed: {str(e)}")
+    finally:
+        # Clean up temp file
+        if os.path.exists(tmp_path):
+            os.unlink(tmp_path)
 
-@app.get("/api/documents", response_model=List[DocumentInfo])
-async def get_documents(limit: int = Query(100, le=1000)):
-    """Get list of all documents"""
-    return state.documents[:limit]
 
-@app.get("/api/documents/{doc_id}", response_model=DocumentInfo)
-async def get_document(doc_id: str):
-    """Get specific document details"""
-    for doc in state.documents:
-        if doc['id'] == doc_id:
-            return doc
-    raise HTTPException(status_code=404, detail="Document not found")
-
-@app.delete("/api/documents/{doc_id}")
-async def delete_document(doc_id: str, background_tasks: BackgroundTasks):
-    """Delete a document"""
-    # Find document index
-    doc_index = None
-    for i, doc in enumerate(state.documents):
-        if doc['id'] == doc_id:
-            doc_index = i
-            break
+@app.post("/api/upload/batch", response_model=List[DocumentResponse])
+async def upload_batch(files: List[UploadFile] = File(...)):
+    """
+    Upload and process multiple documents in batch
+    """
+    processor = get_processor()
+    results = []
     
-    if doc_index is None:
-        raise HTTPException(status_code=404, detail="Document not found")
+    for file in files:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=Path(file.filename).suffix) as tmp:
+            content = await file.read()
+            tmp.write(content)
+            tmp_path = tmp.name
+        
+        try:
+            doc = processor.process_file(tmp_path)
+            results.append(DocumentResponse(
+                id=doc.id,
+                filename=doc.filename,
+                file_hash=doc.file_hash,
+                file_type=doc.file_type,
+                file_size=doc.file_size,
+                language=doc.language,
+                entity_count=len(doc.entities),
+                concept_count=len(doc.concepts),
+                ocr_applied=doc.ocr_applied,
+                created_at=doc.created_at
+            ))
+        except Exception as e:
+            results.append({
+                "filename": file.filename,
+                "error": str(e)
+            })
+        finally:
+            if os.path.exists(tmp_path):
+                os.unlink(tmp_path)
     
-    # Remove from state
-    state.documents.pop(doc_index)
-    
-    # Remove embedding
-    if state.embeddings is not None and doc_index < len(state.embeddings):
-        state.embeddings = np.delete(state.embeddings, doc_index, axis=0)
-    
-    # Delete file
-    for file_path in UPLOAD_DIR.glob(f"{doc_id}_*"):
-        file_path.unlink()
-    
-    # Rebuild graph
-    if state.embeddings is not None and len(state.documents) > 0:
-        build_knowledge_graph(state.documents, state.embeddings)
-    else:
-        state.knowledge_graph.clear()
-    
-    # Save state
-    background_tasks.add_task(state.save)
-    
-    return {"message": "Document deleted successfully"}
-
-@app.get("/api/search", response_model=List[SearchResult])
-async def search_documents(q: str = Query(..., min_length=1), limit: int = Query(10, le=100)):
-    """Search documents using semantic similarity"""
-    if not q.strip():
-        raise HTTPException(status_code=400, detail="Search query cannot be empty")
-    
-    results = search_similar(q, top_k=limit)
     return results
 
-@app.get("/api/graph")
+
+@app.post("/api/search", response_model=SearchResponse)
+async def search(request: SearchRequest):
+    """
+    Search documents using hybrid approach:
+    - Keyword matching
+    - Entity matching
+    - Semantic similarity (optional)
+    """
+    processor = get_processor()
+    
+    results = processor.search(
+        query=request.query,
+        top_k=request.top_k,
+        use_semantic=request.use_semantic
+    )
+    
+    return SearchResponse(
+        results=results,
+        total=len(results)
+    )
+
+
+@app.get("/api/search", response_model=SearchResponse)
+async def search_get(
+    q: str = Query(..., description="Search query"),
+    top_k: int = Query(10, ge=1, le=50),
+    use_semantic: bool = True
+):
+    """GET endpoint for search (for browser compatibility)"""
+    processor = get_processor()
+    
+    results = processor.search(
+        query=q,
+        top_k=top_k,
+        use_semantic=use_semantic
+    )
+    
+    return SearchResponse(
+        results=results,
+        total=len(results)
+    )
+
+
+@app.get("/api/graph", response_model=GraphResponse)
 async def get_graph():
-    """Get knowledge graph data"""
-    nodes = []
-    edges = []
+    """
+    Get knowledge graph data for visualization
+    Returns nodes (documents + entities) and edges (similarity relationships)
+    """
+    processor = get_processor()
+    graph_data = processor.get_graph_data()
     
-    for node, data in state.knowledge_graph.nodes(data=True):
-        nodes.append({
-            "id": node,
-            "label": data.get('label', node),
-            "type": data.get('type', 'unknown'),
-            "size": data.get('size', 10),
-            "color": data.get('color', '#999999')
-        })
-    
-    for u, v, data in state.knowledge_graph.edges(data=True):
-        edges.append({
-            "source": u,
-            "target": v,
-            "type": data.get('type', 'related'),
-            "weight": data.get('weight', 1.0)
-        })
-    
-    return {"nodes": nodes, "edges": edges}
+    return GraphResponse(
+        nodes=graph_data['nodes'],
+        edges=graph_data['edges'],
+        stats=graph_data['stats']
+    )
 
-@app.get("/api/models")
-async def get_models():
-    """Get information about loaded ML models"""
-    models = []
-    
-    if state.embedding_model:
-        models.append(ModelInfo(
-            name="all-MiniLM-L6-v2",
-            type="sentence-transformer",
-            status="loaded",
-            size_mb=90.0,
-            loaded=True
-        ))
-    
-    if state.nlp_model:
-        models.append(ModelInfo(
-            name="en_core_web_sm",
-            type="spacy-nlp",
-            status="loaded",
-            size_mb=12.0,
-            loaded=True
-        ))
-    
-    return models
 
-@app.post("/api/models/load")
-async def load_models_endpoint(background_tasks: BackgroundTasks):
-    """Load ML models"""
-    if state.loaded:
-        return {"message": "Models already loaded"}
-    
-    background_tasks.add_task(load_models)
-    return {"message": "Models loading in background"}
-
-@app.get("/api/stats")
+@app.get("/api/stats", response_model=StatsResponse)
 async def get_stats():
     """Get system statistics"""
-    total_size = sum(doc['size'] for doc in state.documents)
+    processor = get_processor()
+    stats = processor.get_stats()
     
-    # Count entities by type
-    entity_counts = {}
-    for doc in state.documents:
-        for entity in doc.get('entities', []):
-            label = entity['label']
-            entity_counts[label] = entity_counts.get(label, 0) + 1
+    return StatsResponse(**stats)
+
+
+@app.get("/api/documents", response_model=List[DocumentResponse])
+async def list_documents(
+    limit: int = Query(50, ge=1, le=500),
+    offset: int = Query(0, ge=0)
+):
+    """List all processed documents with pagination"""
+    processor = get_processor()
     
-    # Language distribution
-    language_counts = {}
-    for doc in state.documents:
-        lang = doc['language']
-        language_counts[lang] = language_counts.get(lang, 0) + 1
+    docs = list(processor.documents.values())[offset:offset+limit]
     
+    return [
+        DocumentResponse(
+            id=doc.id,
+            filename=doc.filename,
+            file_hash=doc.file_hash,
+            file_type=doc.file_type,
+            file_size=doc.file_size,
+            language=doc.language,
+            entity_count=len(doc.entities),
+            concept_count=len(doc.concepts),
+            ocr_applied=doc.ocr_applied,
+            created_at=doc.created_at
+        )
+        for doc in docs
+    ]
+
+
+@app.get("/api/documents/{doc_id}")
+async def get_document(doc_id: str):
+    """Get detailed information about a specific document"""
+    processor = get_processor()
+    
+    if doc_id not in processor.documents:
+        raise HTTPException(status_code=404, detail="Document not found")
+    
+    doc = processor.documents[doc_id]
     return {
-        "total_documents": len(state.documents),
-        "total_size_bytes": total_size,
-        "total_size_mb": total_size / (1024 * 1024),
-        "graph_nodes": state.knowledge_graph.number_of_nodes(),
-        "graph_edges": state.knowledge_graph.number_of_edges(),
-        "entity_types": entity_counts,
-        "languages": language_counts,
-        "avg_entities_per_doc": sum(len(doc.get('entities', [])) for doc in state.documents) / max(len(state.documents), 1)
+        **doc.to_dict(),
+        "content_preview": doc.content[:500] + "..." if len(doc.content) > 500 else doc.content
     }
 
-@app.get("/api/export")
-async def export_data():
-    """Export all data as JSON"""
+
+@app.delete("/api/documents/{doc_id}")
+async def delete_document(doc_id: str):
+    """Delete a document from the knowledge graph"""
+    processor = get_processor()
+    
+    if doc_id not in processor.documents:
+        raise HTTPException(status_code=404, detail="Document not found")
+    
+    # Remove from documents
+    del processor.documents[doc_id]
+    
+    # Remove from graph nodes
+    if doc_id in processor.knowledge_graph.nodes_data:
+        del processor.knowledge_graph.nodes_data[doc_id]
+    
+    # Remove edges connected to this document
+    processor.knowledge_graph.edges_data = [
+        e for e in processor.knowledge_graph.edges_data
+        if e['source'] != doc_id and e['target'] != doc_id
+    ]
+    
+    # Save state
+    processor._save_state()
+    
+    return {"status": "deleted", "id": doc_id}
+
+
+@app.post("/api/analyze", response_model=EntityResponse)
+async def analyze_text(text: str = Query(..., max_length=10000)):
+    """
+    Analyze text without saving:
+    - Extract entities
+    - Extract concepts
+    - Detect language
+    """
+    processor = get_processor()
+    
+    entities = processor.entity_extractor.extract(text)
+    concepts = processor.entity_extractor.extract_concepts(text)
+    
+    return EntityResponse(
+        entities=entities,
+        concepts=concepts
+    )
+
+
+@app.get("/api/models/status")
+async def get_models_status():
+    """Check status of ML models"""
+    from .engine import (
+        SPACY_AVAILABLE, 
+        SENTENCE_TRANSFORMERS_AVAILABLE,
+        PDF_AVAILABLE,
+        DOCX_AVAILABLE,
+        OCR_AVAILABLE,
+        NETWORKX_AVAILABLE,
+        LANGDETECT_AVAILABLE
+    )
+    
     return {
-        "documents": state.documents,
-        "graph": {
-            "nodes": [(n, d) for n, d in state.knowledge_graph.nodes(data=True)],
-            "edges": [(u, v, d) for u, v, d in state.knowledge_graph.edges(data=True)]
-        },
-        "exported_at": datetime.now().isoformat()
+        "spacy": {"available": SPACY_AVAILABLE, "loaded": SPACY_AVAILABLE},
+        "sentence_transformers": {"available": SENTENCE_TRANSFORMERS_AVAILABLE},
+        "pdf_reader": {"available": PDF_AVAILABLE},
+        "docx_reader": {"available": DOCX_AVAILABLE},
+        "ocr": {"available": OCR_AVAILABLE},
+        "networkx": {"available": NETWORKX_AVAILABLE},
+        "langdetect": {"available": LANGDETECT_AVAILABLE}
     }
+
+
+@app.post("/api/reset")
+async def reset_system():
+    """
+    Reset the entire system (delete all documents and graph)
+    Use with caution!
+    """
+    processor = get_processor()
+    
+    # Clear all data
+    processor.documents.clear()
+    processor.concept_nodes.clear()
+    processor.knowledge_graph = type(processor.knowledge_graph)()
+    
+    # Remove state file
+    state_file = processor.data_dir / 'state.json'
+    if state_file.exists():
+        state_file.unlink()
+    
+    return {
+        "status": "reset_complete",
+        "message": "All documents and graph data have been deleted"
+    }
+
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8001)
