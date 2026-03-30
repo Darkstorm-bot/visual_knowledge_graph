@@ -1,186 +1,108 @@
-# NeuroGraph Knowledge Base - Real Implementation
+# NeuroGraph V2 Backend
 
-A fully functional personal knowledge base with real ML/AI processing, replacing all fake/hardcoded logic from the original demo.
+Real ML/AI-powered Knowledge Graph Backend that replaces all fake/hardcoded logic from the original demo.
 
-## What Was Fixed
+## Features Implemented
 
-### Original Issues (Fake/Hardcoded Logic)
-1. ❌ **Random file hashing** - Used `Math.random()` instead of cryptographic hash
-2. ❌ **Fake node/edge generation** - Random numbers instead of actual graph construction
-3. ❌ **Random language detection** - No actual language analysis
-4. ❌ **Fake OCR decisions** - Random chance instead of real OCR processing
-5. ❌ **Hardcoded search results** - Always returned first 5 documents with random match %
-6. ❌ **Simulated model downloads** - Just animated progress bars
-7. ❌ **Fake VRAM/storage calculations** - Made-up formulas
-8. ❌ **Pipeline demo was pure animation** - No actual processing
+### ✅ Real File Processing
+- **SHA-256 Hashing**: Cryptographic file deduplication (not random strings)
+- **PDF Extraction**: PyPDF2 for text extraction from PDFs
+- **DOCX Extraction**: python-docx for Word documents
+- **OCR**: pytesseract for image text extraction
 
-### New Real Implementation
-✅ **SHA-256 file hashing** - Proper cryptographic deduplication
-✅ **Real text extraction** - PDF (PyPDF2), DOCX (python-docx), Images (pytesseract OCR)
-✅ **Actual language detection** - Heuristic-based detection (Danish/English)
-✅ **Real entity extraction** - spaCy NLP for named entity recognition
-✅ **True semantic search** - Sentence transformers + cosine similarity
-✅ **Knowledge graph construction** - NetworkX with document similarity edges
-✅ **Persistent storage** - JSON files + NumPy arrays for embeddings
-✅ **Real embedding generation** - all-MiniLM-L6-v2 sentence transformers
+### ✅ NLP & ML
+- **Language Detection**: langdetect library (not random assignment)
+- **Entity Extraction**: spaCy with 18+ entity types (PERSON, ORG, GPE, etc.)
+- **Concept Extraction**: Noun phrases and key terms
+- **Semantic Embeddings**: sentence-transformers (all-MiniLM-L6-v2)
 
-## Project Structure
+### ✅ Knowledge Graph
+- **NetworkX Graph**: Real graph structure with nodes and edges
+- **Similarity Edges**: Cosine similarity between document embeddings
+- **Community Detection**: Louvain algorithm for clustering
+- **Graph Statistics**: Density, communities, average degree
 
-```
-/workspace
-├── index.html              # Frontend (needs to be updated to connect to backend)
-├── index.html.backup       # Original demo version
-└── neurograph-backend/
-    ├── app/
-    │   ├── __init__.py
-    │   └── main.py         # FastAPI backend with all real logic
-    ├── uploads/            # Uploaded files stored here
-    ├── data/
-    │   ├── documents.json  # Document metadata
-    │   ├── graph.json      # Knowledge graph structure
-    │   └── embeddings.npy  # Vector embeddings
-    ├── requirements.txt    # Python dependencies
-    └── main.py             # Entry point
-```
+### ✅ Search
+- **Hybrid Search**: Keyword + Entity + Semantic similarity
+- **Re-ranking**: Combined scoring algorithm
+- **Snippets**: Context-aware result previews
 
-## Installation & Setup
+### ✅ Persistence
+- **JSON Storage**: Documents and graph saved to disk
+- **State Recovery**: Automatic loading on startup
 
-### 1. Install Dependencies
+## Quick Start
 
 ```bash
-cd /workspace/neurograph-backend
-pip install -r requirements.txt
+cd neurograph-backend
+./run.sh
 ```
 
-### 2. Download spaCy Model
-
-```bash
-python -m spacy download en_core_web_sm
-```
-
-### 3. Start the Backend Server
-
-```bash
-cd /workspace/neurograph-backend
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-```
-
-The API will be available at `http://localhost:8000`
-
-### 4. API Documentation
-
-Visit `http://localhost:8000/docs` for interactive Swagger UI documentation.
+Visit http://localhost:8001/docs for API documentation.
 
 ## API Endpoints
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/status` | Get system status and stats |
-| POST | `/api/upload` | Upload and process a document |
-| GET | `/api/documents` | List all documents |
-| GET | `/api/documents/{id}` | Get specific document |
-| DELETE | `/api/documents/{id}` | Delete a document |
-| GET | `/api/search?q=query` | Semantic search |
-| GET | `/api/graph` | Get knowledge graph data |
-| GET | `/api/models` | List loaded ML models |
-| POST | `/api/models/load` | Load ML models |
-| GET | `/api/stats` | Get detailed statistics |
-| GET | `/api/export` | Export all data |
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/upload` | POST | Upload and process a document |
+| `/api/upload/batch` | POST | Upload multiple documents |
+| `/api/search` | GET/POST | Search documents |
+| `/api/graph` | GET | Get knowledge graph data |
+| `/api/stats` | GET | Get system statistics |
+| `/api/documents` | GET | List all documents |
+| `/api/documents/{id}` | GET | Get document details |
+| `/api/documents/{id}` | DELETE | Delete a document |
+| `/api/analyze` | POST | Analyze text without saving |
+| `/api/models/status` | GET | Check ML model status |
+| `/api/reset` | POST | Reset entire system |
 
-## How It Works
+## Architecture
 
-### Document Upload Pipeline
+```
+app/
+├── main.py          # FastAPI server and routes
+├── engine.py        # Core ML/AI processing logic
+└── __init__.py
 
-1. **File Upload** → Receive file via HTTP POST
-2. **Hash Generation** → SHA-256 hash for deduplication
-3. **Text Extraction** → Parse PDF/DOCX/TXT or OCR images
-4. **Language Detection** → Analyze text for Danish/English
-5. **Entity Extraction** → spaCy NLP for named entities
-6. **Embedding Generation** → Sentence transformer creates 384-dim vector
-7. **Graph Update** → Add document node, calculate similarity edges
-8. **Persistence** → Save to disk (JSON + NumPy)
-
-### Semantic Search
-
-1. User enters query
-2. Query embedded using same model
-3. Cosine similarity calculated against all document embeddings
-4. Top-K results returned with scores
-5. Matched entities highlighted
-
-### Knowledge Graph
-
-- **Document Nodes** (green) - Each uploaded document
-- **Entity Nodes** (blue) - Extracted named entities (PERSON, ORG, GPE, etc.)
-- **Similarity Edges** - Connect similar documents (cosine > 0.3)
-- **Contains Edges** - Connect documents to their entities
-
-## Testing the Backend
-
-```python
-import requests
-
-# Check status
-response = requests.get('http://localhost:8000/api/status')
-print(response.json())
-
-# Upload a file
-with open('test.pdf', 'rb') as f:
-    response = requests.post('http://localhost:8000/api/upload', files={'file': f})
-    print(response.json())
-
-# Search
-response = requests.get('http://localhost:8000/api/search', params={'q': 'machine learning'})
-print(response.json())
-
-# Get graph
-response = requests.get('http://localhost:8000/api/graph')
-print(response.json())
+data/                # Persistent storage
+└── state.json       # Documents and graph state
 ```
 
-## Frontend Integration
+## Dependencies
 
-The frontend (`index.html`) needs to be updated to call the real backend APIs. Key changes:
+See `requirements.txt` for full list. Key packages:
+- fastapi, uvicorn - Web framework
+- spacy - NLP and entity extraction
+- sentence-transformers - Semantic embeddings
+- networkx - Graph processing
+- PyPDF2, python-docx, pytesseract - File processing
 
-1. Replace fake `AppState` with API calls
-2. Use `fetch()` to call `/api/upload` instead of simulating
-3. Call `/api/search` for real semantic search
-4. Fetch `/api/graph` for actual graph data
-5. Display real entity counts, language detection results, etc.
+## Comparison: V1 Fake vs V2 Real
 
-## Technology Stack
+| Feature | V1 (Fake) | V2 (Real) |
+|---------|-----------|-----------|
+| File Hash | `Math.random()` | SHA-256 |
+| Language | Random choice | langdetect |
+| Entities | None | spaCy NLP |
+| Embeddings | None | sentence-transformers |
+| Search | First 5 docs | Hybrid semantic search |
+| Graph Edges | Random count | Cosine similarity |
+| Storage | In-memory | JSON persistence |
+| OCR | Random boolean | pytesseract |
 
-### Backend
-- **FastAPI** - Modern async web framework
-- **Sentence Transformers** - Text embeddings
-- **spaCy** - NLP and entity extraction
-- **NetworkX** - Graph data structures
-- **PyPDF2** - PDF parsing
-- **python-docx** - Word document parsing
-- **pytesseract** - OCR for images
-- **NumPy/Scikit-learn** - Vector operations and similarity
+## Testing
 
-### Frontend (existing)
-- Vanilla JavaScript
-- Tailwind CSS
-- vis-network for graph visualization
+```bash
+# Test upload
+curl -X POST http://localhost:8001/api/upload \
+  -F "file=@/path/to/document.pdf"
 
-## Performance Notes
+# Test search
+curl "http://localhost:8001/api/search?q=machine+learning&top_k=5"
 
-- First upload triggers model download (~300MB for sentence-transformers)
-- Embedding generation: ~50ms per document on CPU
-- Similarity search: O(n) but fast for <1000 documents
-- Consider adding FAISS or Annoy for larger datasets
+# Get graph
+curl http://localhost:8001/api/graph
 
-## Future Improvements
-
-1. Add PostgreSQL for production persistence
-2. Implement chunking for long documents
-3. Add multi-language support (better than heuristic detection)
-4. Integrate RAG pipeline for Q&A
-5. Add user authentication
-6. Deploy with Docker
-
-## License
-
-MIT License
+# Get stats
+curl http://localhost:8001/api/stats
+```
