@@ -1,0 +1,3080 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NeuroGraph - Personal Knowledge Base</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vis-network@9.1.6/dist/vis-network.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/@fontsource/jetbrains-mono@5.0.18/index.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@fontsource/inter@5.0.15/400.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@fontsource/inter@5.0.15/500.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@fontsource/inter@5.0.15/600.css" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0c;
+            --bg-secondary: #121216;
+            --bg-tertiary: #1a1a1f;
+            --bg-elevated: #1f1f26;
+            --border-subtle: #2a2a32;
+            --border-medium: #3a3a45;
+            --text-primary: #f4f4f5;
+            --text-secondary: #a1a1aa;
+            --text-muted: #71717a;
+            --accent-primary: #6366f1;
+            --accent-secondary: #818cf8;
+            --accent-glow: rgba(99, 102, 241, 0.15);
+            --success: #10b981;
+            --success-bg: rgba(16, 185, 129, 0.1);
+            --warning: #f59e0b;
+            --warning-bg: rgba(245, 158, 11, 0.1);
+            --error: #ef4444;
+            --error-bg: rgba(239, 68, 68, 0.1);
+            --info: #06b6d4;
+            --info-bg: rgba(6, 182, 212, 0.1);
+            --purple: #a855f7;
+            --purple-bg: rgba(168, 85, 247, 0.1);
+        }
+
+        * {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        .mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        body {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-secondary);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-medium);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-muted);
+        }
+
+        .panel {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+        }
+
+        .panel-elevated {
+            background: var(--bg-elevated);
+            border: 1px solid var(--border-medium);
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 8px 16px;
+            font-size: 13px;
+            font-weight: 500;
+            border-radius: 6px;
+            border: 1px solid transparent;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .btn-primary {
+            background: var(--accent-primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5558e3;
+        }
+
+        .btn-primary:active {
+            background: #4f46d4;
+        }
+
+        .btn-secondary {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border-color: var(--border-subtle);
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-elevated);
+            border-color: var(--border-medium);
+        }
+
+        .btn-ghost {
+            background: transparent;
+            color: var(--text-secondary);
+        }
+
+        .btn-ghost:hover {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        .btn-sm {
+            padding: 4px 10px;
+            font-size: 12px;
+        }
+
+        .btn-icon {
+            padding: 6px;
+            border-radius: 5px;
+        }
+
+        .input {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-subtle);
+            border-radius: 6px;
+            padding: 8px 12px;
+            font-size: 13px;
+            color: var(--text-primary);
+            transition: all 0.15s ease;
+        }
+
+        .input:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+
+        .input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 8px;
+            font-size: 11px;
+            font-weight: 500;
+            border-radius: 9999px;
+        }
+
+        .badge-success {
+            background: var(--success-bg);
+            color: var(--success);
+        }
+
+        .badge-warning {
+            background: var(--warning-bg);
+            color: var(--warning);
+        }
+
+        .badge-error {
+            background: var(--error-bg);
+            color: var(--error);
+        }
+
+        .badge-info {
+            background: var(--info-bg);
+            color: var(--info);
+        }
+
+        .badge-neutral {
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+        }
+
+        .badge-purple {
+            background: var(--purple-bg);
+            color: var(--purple);
+        }
+
+        .progress {
+            height: 4px;
+            background: var(--bg-tertiary);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
+            border-radius: 2px;
+            transition: width 0.3s ease;
+        }
+
+        .progress-bar-success {
+            background: var(--success);
+        }
+
+        .progress-bar-warning {
+            background: var(--warning);
+        }
+
+        .progress-bar-error {
+            background: var(--error);
+        }
+
+        .graph-container {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .terminal {
+            background: #0d0d10;
+            border: 1px solid var(--border-subtle);
+            border-radius: 6px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            padding: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .terminal-line {
+            display: flex;
+            gap: 8px;
+            padding: 2px 0;
+            line-height: 1.6;
+        }
+
+        .terminal-line.error { color: var(--error); }
+        .terminal-line.success { color: var(--success); }
+        .terminal-line.warning { color: var(--warning); }
+        .terminal-line.info { color: var(--info); }
+        .terminal-line.dim { color: var(--text-muted); }
+        .terminal-line.debug { color: #6b7280; }
+
+        .terminal-timestamp {
+            color: var(--text-muted);
+            flex-shrink: 0;
+        }
+
+        .card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            padding: 16px;
+            transition: all 0.2s ease;
+        }
+
+        .card:hover {
+            border-color: var(--border-medium);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        .table th {
+            text-align: left;
+            padding: 10px 12px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .table tr:hover td {
+            background: var(--bg-tertiary);
+        }
+
+        .tooltip {
+            position: relative;
+        }
+
+        .tooltip::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%) translateY(-4px);
+            background: var(--bg-elevated);
+            border: 1px solid var(--border-medium);
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.15s ease;
+            z-index: 100;
+        }
+
+        .tooltip:hover::after {
+            opacity: 1;
+            transform: translateX(-50%) translateY(-8px);
+        }
+
+        .modal-overlay {
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(4px);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        .animate-fade-in {
+            animation: fadeIn 0.2s ease;
+        }
+
+        .animate-slide-up {
+            animation: slideUp 0.3s ease;
+        }
+
+        .animate-pulse {
+            animation: pulse 2s infinite;
+        }
+
+        .animate-spin {
+            animation: spin 1s linear infinite;
+        }
+
+        .animate-shimmer {
+            background: linear-gradient(90deg, var(--bg-tertiary) 25%, var(--bg-elevated) 50%, var(--bg-tertiary) 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--text-muted);
+        }
+
+        .status-dot.active {
+            background: var(--success);
+            box-shadow: 0 0 8px var(--success);
+        }
+
+        .status-dot.processing {
+            background: var(--warning);
+            box-shadow: 0 0 8px var(--warning);
+        }
+
+        .status-dot.error {
+            background: var(--error);
+            box-shadow: 0 0 8px var(--error);
+        }
+
+        .file-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .file-icon.pdf { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+        .file-icon.docx { background: rgba(59, 130, 246, 0.15); color: #3b82f6; }
+        .file-icon.code { background: rgba(245, 158, 11, 0.15); color: #f59e0b; }
+        .file-icon.tns { background: rgba(249, 115, 22, 0.15); color: #f97316; }
+        .file-icon.image { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+        .file-icon.md { background: rgba(139, 92, 246, 0.15); color: #8b5cf6; }
+        .file-icon.tex { background: rgba(236, 72, 153, 0.15); color: #ec4899; }
+        .file-icon.ipynb { background: rgba(245, 158, 11, 0.15); color: #f59e0b; }
+
+        .vram-meter {
+            position: relative;
+            height: 6px;
+            background: var(--bg-tertiary);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .vram-meter-fill {
+            position: absolute;
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.5s ease, background 0.3s ease;
+        }
+
+        .vram-meter-fill.safe {
+            background: linear-gradient(90deg, #10b981, #34d399);
+        }
+
+        .vram-meter-fill.warning {
+            background: linear-gradient(90deg, #f59e0b, #fbbf24);
+        }
+
+        .vram-meter-fill.danger {
+            background: linear-gradient(90deg, #ef4444, #f87171);
+        }
+
+        .vis-network {
+            background: var(--bg-primary) !important;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            border-radius: 6px;
+            color: var(--text-secondary);
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .nav-item:hover {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        .nav-item.active {
+            background: var(--accent-glow);
+            color: var(--accent-secondary);
+        }
+
+        .nav-item svg {
+            width: 18px;
+            height: 18px;
+            flex-shrink: 0;
+        }
+
+        .dropzone {
+            border: 2px dashed var(--border-medium);
+            border-radius: 8px;
+            padding: 32px;
+            text-align: center;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .dropzone:hover {
+            border-color: var(--accent-primary);
+            background: var(--accent-glow);
+        }
+
+        .dropzone.dragover {
+            border-color: var(--accent-secondary);
+            background: var(--accent-glow);
+        }
+
+        .log-debug { color: #6b7280; }
+        .log-info { color: var(--info); }
+        .log-success { color: var(--success); }
+        .log-warning { color: var(--warning); }
+        .log-error { color: var(--error); }
+
+        .code-block {
+            background: #0d0d10;
+            border: 1px solid var(--border-subtle);
+            border-radius: 6px;
+            padding: 12px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            overflow-x: auto;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+        }
+
+        .stat-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            padding: 16px;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        .stat-change {
+            font-size: 11px;
+            margin-top: 6px;
+        }
+
+        .stat-change.positive { color: var(--success); }
+        .stat-change.negative { color: var(--error); }
+
+        .toast-container {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .toast {
+            background: var(--bg-elevated);
+            border: 1px solid var(--border-medium);
+            border-radius: 8px;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 320px;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+            animation: slideUp 0.3s ease;
+        }
+
+        .toast.success { border-left: 3px solid var(--success); }
+        .toast.error { border-left: 3px solid var(--error); }
+        .toast.warning { border-left: 3px solid var(--warning); }
+        .toast.info { border-left: 3px solid var(--info); }
+
+        .context-menu {
+            background: var(--bg-elevated);
+            border: 1px solid var(--border-medium);
+            border-radius: 8px;
+            padding: 6px;
+            min-width: 180px;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+        }
+
+        .context-menu-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .context-menu-item:hover {
+            background: var(--bg-tertiary);
+        }
+
+        .context-menu-item.danger {
+            color: var(--error);
+        }
+
+        .context-menu-item.danger:hover {
+            background: var(--error-bg);
+        }
+
+        .context-menu-divider {
+            height: 1px;
+            background: var(--border-subtle);
+            margin: 6px 0;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 2px;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .tab {
+            padding: 10px 16px;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.15s ease;
+            margin-bottom: -1px;
+        }
+
+        .tab:hover {
+            color: var(--text-primary);
+        }
+
+        .tab.active {
+            color: var(--accent-secondary);
+            border-bottom-color: var(--accent-primary);
+        }
+
+        .toggle {
+            position: relative;
+            width: 44px;
+            height: 24px;
+        }
+
+        .toggle input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-subtle);
+            border-radius: 24px;
+            transition: all 0.2s ease;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 2px;
+            bottom: 2px;
+            background: var(--text-secondary);
+            border-radius: 50%;
+            transition: all 0.2s ease;
+        }
+
+        .toggle input:checked + .toggle-slider {
+            background: var(--accent-primary);
+            border-color: var(--accent-primary);
+        }
+
+        .toggle input:checked + .toggle-slider:before {
+            transform: translateX(20px);
+            background: white;
+        }
+
+        .select {
+            appearance: none;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-subtle);
+            border-radius: 6px;
+            padding: 8px 36px 8px 12px;
+            font-size: 13px;
+            color: var(--text-primary);
+            cursor: pointer;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2371717a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+        }
+
+        .select:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+        }
+
+        .chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-subtle);
+            border-radius: 9999px;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .chip .remove {
+            cursor: pointer;
+            opacity: 0.6;
+            transition: opacity 0.15s ease;
+        }
+
+        .chip .remove:hover {
+            opacity: 1;
+        }
+
+        .pipeline-step {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+
+        .pipeline-step.completed {
+            background: var(--success-bg);
+            border: 1px solid var(--success);
+        }
+
+        .pipeline-step.processing {
+            background: var(--warning-bg);
+            border: 1px solid var(--warning);
+        }
+
+        .pipeline-step.pending {
+            opacity: 0.5;
+        }
+
+        .pipeline-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .pipeline-icon.completed {
+            background: var(--success);
+            color: white;
+        }
+
+        .pipeline-icon.processing {
+            background: var(--warning);
+            color: white;
+        }
+
+        .pipeline-icon.pending {
+            background: var(--bg-elevated);
+            color: var(--text-muted);
+        }
+
+        .model-card {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            padding: 16px;
+            transition: all 0.2s ease;
+        }
+
+        .model-card:hover {
+            border-color: var(--border-medium);
+        }
+
+        .model-card.active {
+            border-color: var(--accent-primary);
+            background: var(--accent-glow);
+        }
+
+        .spec-table {
+            width: 100%;
+            font-size: 12px;
+        }
+
+        .spec-table td {
+            padding: 6px 0;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .spec-table td:first-child {
+            color: var(--text-muted);
+            width: 40%;
+        }
+
+        .spec-table td:last-child {
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .spec-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .search-result-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            padding: 16px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .search-result-card:hover {
+            border-color: var(--accent-primary);
+            background: var(--bg-tertiary);
+        }
+
+        .search-highlight {
+            background: var(--accent-glow);
+            color: var(--accent-secondary);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        .storage-bar {
+            height: 8px;
+            background: var(--bg-tertiary);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .storage-bar-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+
+        .storage-bar-fill.vector {
+            background: linear-gradient(90deg, #6366f1, #8b5cf6);
+        }
+
+        .storage-bar-fill.graph {
+            background: linear-gradient(90deg, #10b981, #34d399);
+        }
+
+        .storage-bar-fill.ocr {
+            background: linear-gradient(90deg, #f59e0b, #fbbf24);
+        }
+
+        .storage-bar-fill.meta {
+            background: linear-gradient(90deg, #06b6d4, #22d3ee);
+        }
+
+        .batch-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+
+        .batch-item .progress {
+            flex: 1;
+            height: 6px;
+        }
+
+        .hash-display {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            color: var(--text-muted);
+            background: var(--bg-primary);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        .language-badge {
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            background: var(--bg-elevated);
+            color: var(--text-secondary);
+        }
+
+        .language-badge.da {
+            background: rgba(239, 68, 68, 0.15);
+            color: #ef4444;
+        }
+
+        .language-badge.en {
+            background: rgba(59, 130, 246, 0.15);
+            color: #3b82f6;
+        }
+
+        .language-badge.mixed {
+            background: rgba(168, 85, 247, 0.15);
+            color: #a855f7;
+        }
+    </style>
+</head>
+<body class="h-screen overflow-hidden flex">
+    <!-- Sidebar -->
+    <aside class="w-64 flex-shrink-0 flex flex-col border-r border-[var(--border-subtle)] bg-[var(--bg-secondary)]">
+        <div class="p-4 border-b border-[var(--border-subtle)]">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-[var(--accent-primary)] to-[#a855f7] flex items-center justify-center">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="font-semibold text-[var(--text-primary)]">NeuroGraph</h1>
+                    <p class="text-xs text-[var(--text-muted)]">Knowledge Base v2.0</p>
+                </div>
+            </div>
+        </div>
+
+        <nav class="flex-1 p-3 overflow-y-auto">
+            <div class="space-y-1">
+                <div class="nav-item active" data-view="dashboard">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/>
+                    </svg>
+                    Dashboard
+                </div>
+                <div class="nav-item" data-view="pipeline">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/>
+                    </svg>
+                    Processing Pipeline
+                </div>
+                <div class="nav-item" data-view="graph">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"/>
+                    </svg>
+                    Graph Explorer
+                </div>
+                <div class="nav-item" data-view="documents">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                    Documents
+                </div>
+                <div class="nav-item" data-view="search">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                    </svg>
+                    Semantic Search
+                </div>
+                <div class="nav-item" data-view="models">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"/>
+                    </svg>
+                    Models
+                </div>
+                <div class="nav-item" data-view="storage">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"/>
+                    </svg>
+                    Storage
+                </div>
+                <div class="nav-item" data-view="settings">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    </svg>
+                    Settings
+                </div>
+            </div>
+
+            <div class="mt-6 pt-4 border-t border-[var(--border-subtle)]">
+                <div class="px-3 mb-3">
+                    <div class="flex items-center justify-between text-xs text-[var(--text-muted)] mb-2">
+                        <span>System Status</span>
+                        <span class="status-dot active" id="system-status"></span>
+                    </div>
+                </div>
+                <div class="px-3 mb-3">
+                    <div class="flex items-center justify-between text-xs mb-1">
+                        <span class="text-[var(--text-secondary)]">VRAM Usage</span>
+                        <span class="mono text-[var(--text-secondary)]" id="vram-text">0.0 / 8.0 GB</span>
+                    </div>
+                    <div class="vram-meter">
+                        <div class="vram-meter-fill safe" id="vram-meter" style="width: 0%"></div>
+                    </div>
+                </div>
+                <div class="px-3">
+                    <div class="flex items-center justify-between text-xs mb-1">
+                        <span class="text-[var(--text-secondary)]">Storage</span>
+                        <span class="mono text-[var(--text-secondary)]" id="storage-text">0 / 100 GB</span>
+                    </div>
+                    <div class="vram-meter">
+                        <div class="vram-meter-fill safe" id="storage-meter" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col overflow-hidden bg-[var(--bg-primary)]">
+        <!-- Header -->
+        <header class="h-14 flex-shrink-0 border-b border-[var(--border-subtle)] flex items-center justify-between px-6 bg-[var(--bg-secondary)]">
+            <div>
+                <h2 class="text-sm font-semibold text-[var(--text-primary)]" id="page-title">Dashboard</h2>
+                <p class="text-xs text-[var(--text-muted)]" id="page-subtitle">System overview and statistics</p>
+            </div>
+            <div class="flex items-center gap-3">
+                <div class="relative">
+                    <input type="text" placeholder="Quick search... (Cmd+K)" class="input w-64 pl-9" id="quick-search">
+                    <svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                    </svg>
+                    <span class="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-[var(--text-muted)] border border-[var(--border-subtle)] rounded px-1.5 py-0.5">⌘K</span>
+                </div>
+                <button class="btn btn-primary" onclick="openUploadModal()">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                    </svg>
+                    Add Documents
+                </button>
+                <button class="btn btn-ghost btn-icon" onclick="toggleDebugPanel()" data-tooltip="Toggle Debug Panel">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>
+                    </svg>
+                </button>
+            </div>
+        </header>
+
+        <!-- Content Area -->
+        <div class="flex-1 overflow-auto p-6" id="main-content">
+            <!-- Dashboard View -->
+            <div id="dashboard-view" class="view-section space-y-6">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="flex items-center justify-between">
+                            <div class="w-10 h-10 rounded-lg bg-[var(--info-bg)] flex items-center justify-center">
+                                <svg class="w-5 h-5 text-[var(--info)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                </svg>
+                            </div>
+                            <span class="badge badge-success" id="docs-change">+0</span>
+                        </div>
+                        <div class="stat-value mono" id="stat-docs">0</div>
+                        <div class="stat-label">Documents Indexed</div>
+                        <div class="stat-change positive">
+                            <span id="ocr-count">0</span> with OCR
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="flex items-center justify-between">
+                            <div class="w-10 h-10 rounded-lg bg-[var(--accent-glow)] flex items-center justify-center">
+                                <svg class="w-5 h-5 text-[var(--accent-secondary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"/>
+                                </svg>
+                            </div>
+                            <span class="badge badge-success" id="nodes-change">+0</span>
+                        </div>
+                        <div class="stat-value mono" id="stat-nodes">0</div>
+                        <div class="stat-label">Knowledge Nodes</div>
+                        <div class="stat-change positive">
+                            <span id="concepts-count">0</span> concepts
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="flex items-center justify-between">
+                            <div class="w-10 h-10 rounded-lg bg-[var(--warning-bg)] flex items-center justify-center">
+                                <svg class="w-5 h-5 text-[var(--warning)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
+                                </svg>
+                            </div>
+                            <span class="badge badge-success" id="edges-change">+0</span>
+                        </div>
+                        <div class="stat-value mono" id="stat-edges">0</div>
+                        <div class="stat-label">Relationships</div>
+                        <div class="stat-change positive">
+                            <span id="similarity-count">0</span> by similarity
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="flex items-center justify-between">
+                            <div class="w-10 h-10 rounded-lg bg-[var(--success-bg)] flex items-center justify-center">
+                                <svg class="w-5 h-5 text-[var(--success)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="stat-value mono" id="stat-queries">0</div>
+                        <div class="stat-label">Queries Executed</div>
+                        <div class="stat-change">
+                            <span class="language-badge da">DA</span>
+                            <span class="language-badge en">EN</span>
+                            <span class="language-badge mixed">Mixed</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-6">
+                    <div class="col-span-2 panel p-4">
+                        <div class="card-header">
+                            <h3 class="font-semibold text-[var(--text-primary)]">Knowledge Graph Preview</h3>
+                            <div class="flex items-center gap-2">
+                                <button class="btn btn-ghost btn-sm" onclick="resetGraph()">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                                    </svg>
+                                    Reset
+                                </button>
+                                <button class="btn btn-secondary btn-sm" onclick="switchView('graph')">
+                                    Full View
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="graph-container h-80" id="graph-preview"></div>
+                    </div>
+
+                    <div class="panel p-4">
+                        <div class="card-header">
+                            <h3 class="font-semibold text-[var(--text-primary)]">System Log</h3>
+                            <button class="btn btn-ghost btn-sm" onclick="clearLog()">Clear</button>
+                        </div>
+                        <div class="terminal" id="system-log">
+                            <div class="terminal-line dim">
+                                <span class="terminal-timestamp">--:--:--</span>
+                                <span>System initialized. Waiting for input...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel p-4">
+                    <div class="card-header">
+                        <h3 class="font-semibold text-[var(--text-primary)]">Supported File Types</h3>
+                        <span class="badge badge-info">8 parsers active</span>
+                    </div>
+                    <div class="grid grid-cols-8 gap-3">
+                        <div class="card text-center cursor-pointer hover:border-[var(--accent-primary)]" onclick="openUploadModal()">
+                            <div class="file-icon pdf mx-auto mb-2">PDF</div>
+                            <p class="text-xs text-[var(--text-secondary)]">PDF Documents</p>
+                            <p class="text-xs text-[var(--text-muted)] mono mt-1" id="count-pdf">0 files</p>
+                        </div>
+                        <div class="card text-center cursor-pointer hover:border-[var(--accent-primary)]" onclick="openUploadModal()">
+                            <div class="file-icon docx mx-auto mb-2">DOC</div>
+                            <p class="text-xs text-[var(--text-secondary)]">Word Documents</p>
+                            <p class="text-xs text-[var(--text-muted)] mono mt-1" id="count-docx">0 files</p>
+                        </div>
+                        <div class="card text-center cursor-pointer hover:border-[var(--accent-primary)]" onclick="openUploadModal()">
+                            <div class="file-icon code mx-auto mb-2">PY</div>
+                            <p class="text-xs text-[var(--text-secondary)]">Code Files</p>
+                            <p class="text-xs text-[var(--text-muted)] mono mt-1" id="count-code">0 files</p>
+                        </div>
+                        <div class="card text-center cursor-pointer hover:border-[var(--accent-primary)]" onclick="openUploadModal()">
+                            <div class="file-icon tns mx-auto mb-2">TNS</div>
+                            <p class="text-xs text-[var(--text-secondary)]">Ti-Nspire Files</p>
+                            <p class="text-xs text-[var(--text-muted)] mono mt-1" id="count-tns">0 files</p>
+                        </div>
+                        <div class="card text-center cursor-pointer hover:border-[var(--accent-primary)]" onclick="openUploadModal()">
+                            <div class="file-icon image mx-auto mb-2">IMG</div>
+                            <p class="text-xs text-[var(--text-secondary)]">Images (OCR)</p>
+                            <p class="text-xs text-[var(--text-muted)] mono mt-1" id="count-image">0 files</p>
+                        </div>
+                        <div class="card text-center cursor-pointer hover:border-[var(--accent-primary)]" onclick="openUploadModal()">
+                            <div class="file-icon md mx-auto mb-2">MD</div>
+                            <p class="text-xs text-[var(--text-secondary)]">Markdown</p>
+                            <p class="text-xs text-[var(--text-muted)] mono mt-1" id="count-md">0 files</p>
+                        </div>
+                        <div class="card text-center cursor-pointer hover:border-[var(--accent-primary)]" onclick="openUploadModal()">
+                            <div class="file-icon tex mx-auto mb-2">TEX</div>
+                            <p class="text-xs text-[var(--text-secondary)]">LaTeX</p>
+                            <p class="text-xs text-[var(--text-muted)] mono mt-1" id="count-tex">0 files</p>
+                        </div>
+                        <div class="card text-center cursor-pointer hover:border-[var(--accent-primary)]" onclick="openUploadModal()">
+                            <div class="file-icon ipynb mx-auto mb-2">IPY</div>
+                            <p class="text-xs text-[var(--text-secondary)]">Jupyter</p>
+                            <p class="text-xs text-[var(--text-muted)] mono mt-1" id="count-ipynb">0 files</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pipeline View -->
+            <div id="pipeline-view" class="view-section hidden space-y-6">
+                <div class="panel p-6">
+                    <div class="card-header">
+                        <h3 class="font-semibold text-lg text-[var(--text-primary)]">Content Analysis Pipeline</h3>
+                        <div class="flex items-center gap-3">
+                            <span class="badge badge-info" id="pipeline-status">Idle</span>
+                            <button class="btn btn-secondary btn-sm" onclick="runPipelineDemo()">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
+                                </svg>
+                                Run Demo
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="space-y-3" id="pipeline-steps">
+                        <div class="pipeline-step pending" id="step-parse">
+                            <div class="pipeline-icon pending">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                </svg>
+                            </div>
+                            <div class="flex-1">
+                                <div class="flex items-center justify-between mb-1">
+                                    <span class="font-medium text-[var(--text-primary)]">1. Document Parsing</span>
+                                    <span class="text-xs text-[var(--text-muted)]">pdfplumber, PyMuPDF, python-docx, tree-sitter</span>
+                                </div>
+                                <p class="text-xs text-[var(--text-muted)]">Extract text from PDFs, Word, Code (AST), Images (OCR), Ti-Nspire XML</p>
+                            </div>
+                            <span class="badge badge-neutral" id="step-parse-status">Pending</span>
+                        </div>
+
+                        <div class="pipeline-step pending" id="step-language">
+                            <div class="pipeline-icon pending">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"/>
+                                </svg>
+                            </div>
+                            <div class="flex-1">
+                                <div class="flex items-center justify-between mb-1">
+                                    <span class="font-medium text-[var(--text-primary)]">2. Language Detection</span>
+                                    <span class="text-xs text-[var(--text-muted)]">langdetect, fasttext</span>
+                                </div>
+                                <p class="text-xs text-[var(--text-muted)]">Detect Danish (da), English (en), or Mixed content. Preserve academic vocabulary.</p>
+                            </div>
+                            <span class="badge badge-neutral" id="step-language-status">Pending</span>
+                        </div>
+
+                        <div class="pipeline-step pending" id="step-math">
+                            <div class="pipeline-icon pending">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 36v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                                </svg>
+                            </div>
+                            <div class="flex-1">
+                                <div class="flex items-center justify-between mb-1">
+                                    <span class="font-medium text-[var(--text-primary)]">3. Math Expression Extraction</span>
+                                    <span class="text-xs text-[var(--text-muted)]">LaTeX parsing, Ti-Nspire XML</span>
+                                </div>
+                                <p class="text-xs text-[var(--text-muted)]">Extract CAS expressions, matrices, differential equations. Convert to searchable text.</p>
+                            </div>
+                            <span class="badge badge-neutral" id="step-math-status">Pending</span>
+                        </div>
+
+                        <div class="pipeline-step pending" id="step-embed">
+                            <div class="pipeline-icon pending">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"/>
+                                </svg>
+                            </div>
+                            <div class="flex-1">
+                                <div class="flex items-center justify-between mb-1">
+                                    <span class="font-medium text-[var(--text-primary)]">4. Semantic Embedding</span>
+                                    <span class="text-xs text-[var(--text-muted)]">multilingual-e5-large-instruct</span>
+                                </div>
+                                <p class="text-xs text-[var(--text-muted)]">Generate 1024-dim vectors. Danish + English + Code aware. Batch processing with VRAM management.</p>
+                            </div>
+                            <span class="badge badge-neutral" id="step-embed-status">Pending</span>
+                        </div>
+
+                        <div class="pipeline-step pending" id="step-entity">
+                            <div class="pipeline-icon pending">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+                                </svg>
+                            </div>
+                            <div class="flex-1">
+                                <div class="flex items-center justify-between mb-1">
+                                    <span class="font-medium text-[var(--text-primary)]">5. Entity & Concept Extraction</span>
+                                    <span class="text-xs text-[var(--text-muted)]">spaCy, custom NER</span>
+                                </div>
+                                <p class="text-xs text-[var(--text-muted)]">Extract named entities, technical concepts, file references. Build concept graph nodes.</p>
+                            </div>
+                            <span class="badge badge-neutral" id="step-entity-status">Pending</span>
+                        </div>
+
+                        <div class="pipeline-step pending" id="step-graph">
+                            <div class="pipeline-icon pending">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"/>
+                                </svg>
+                            </div>
+                            <div class="flex-1">
+                                <div class="flex items-center justify-between mb-1">
+                                    <span class="font-medium text-[var(--text-primary)]">6. Graph Construction</span>
+                                    <span class="text-xs text-[var(--text-muted)]">NetworkX, cosine similarity</span>
+                                </div>
+                                <p class="text-xs text-[var(--text-muted)]">Build relationships: implements, mentions, depends_on, similar_to (>0.8 cosine). Persist to disk.</p>
+                            </div>
+                            <span class="badge badge-neutral" id="step-graph-status">Pending</span>
+                        </div>
+
+                        <div class="pipeline-step pending" id="step-store">
+                            <div class="pipeline-icon pending">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"/>
+                                </svg>
+                            </div>
+                            <div class="flex-1">
+                                <div class="flex items-center justify-between mb-1">
+                                    <span class="font-medium text-[var(--text-primary)]">7. Persistent Storage</span>
+                                    <span class="text-xs text-[var(--text-muted)]">SQLite, ChromaDB, Pickle</span>
+                                </div>
+                                <p class="text-xs text-[var(--text-muted)]">Store metadata (SQLite), embeddings (ChromaDB), graph (Pickle). Hash-based deduplication.</p>
+                            </div>
+                            <span class="badge badge-neutral" id="step-store-status">Pending</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-6">
+                    <div class="panel p-4">
+                        <h4 class="font-semibold text-[var(--text-primary)] mb-4">Batch Processing Queue</h4>
+                        <div id="batch-queue">
+                            <div class="text-center py-8 text-[var(--text-muted)]">
+                                <svg class="w-12 h-12 mx-auto mb-3 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                                </svg>
+                                <p class="text-sm">No files in queue</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="panel p-4">
+                        <h4 class="font-semibold text-[var(--text-primary)] mb-4">File Hash Tracking</h4>
+                        <div id="hash-tracking">
+                            <div class="text-center py-8 text-[var(--text-muted)]">
+                                <p class="text-sm">Hash tracking prevents reprocessing</p>
+                                <p class="text-xs mt-2">MD5 hashes stored in SQLite</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Graph View -->
+            <div id="graph-view" class="view-section hidden h-full">
+                <div class="flex gap-4 h-full">
+                    <div class="flex-1 panel p-4 flex flex-col">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center gap-3">
+                                <h3 class="font-semibold text-[var(--text-primary)]">Knowledge Graph Explorer</h3>
+                                <div class="flex items-center gap-2">
+                                    <select class="select" id="node-filter">
+                                        <option value="all">All Nodes</option>
+                                        <option value="concept">Concepts</option>
+                                        <option value="document">Documents</option>
+                                        <option value="project">Projects</option>
+                                        <option value="file">Files</option>
+                                        <option value="math">Math</option>
+                                    </select>
+                                    <select class="select" id="edge-filter">
+                                        <option value="all">All Relationships</option>
+                                        <option value="implements">implements</option>
+                                        <option value="mentions">mentions</option>
+                                        <option value="depends_on">depends_on</option>
+                                        <option value="similar_to">similar_to</option>
+                                        <option value="references">references</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <button class="btn btn-ghost btn-sm" onclick="zoomIn()" data-tooltip="Zoom In">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                                    </svg>
+                                </button>
+                                <button class="btn btn-ghost btn-sm" onclick="zoomOut()" data-tooltip="Zoom Out">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/>
+                                    </svg>
+                                </button>
+                                <button class="btn btn-ghost btn-sm" onclick="resetGraph()" data-tooltip="Reset View">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="graph-container flex-1" id="full-graph"></div>
+                    </div>
+                    
+                    <div class="w-80 panel p-4 overflow-auto">
+                        <h3 class="font-semibold text-[var(--text-primary)] mb-4">Node Details</h3>
+                        <div id="node-details">
+                            <div class="text-center py-12 text-[var(--text-muted)]">
+                                <svg class="w-12 h-12 mx-auto mb-3 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"/>
+                                </svg>
+                                <p class="text-sm">Select a node to view details</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Documents View -->
+            <div id="documents-view" class="view-section hidden">
+                <div class="panel p-4">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-3">
+                            <h3 class="font-semibold text-[var(--text-primary)]">Document Library</h3>
+                            <span class="badge badge-neutral" id="doc-count">0 documents</span>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <input type="text" placeholder="Filter documents..." class="input w-48" id="doc-filter">
+                            <select class="select" id="doc-type-filter">
+                                <option value="all">All Types</option>
+                                <option value="pdf">PDF</option>
+                                <option value="docx">DOCX</option>
+                                <option value="code">Code</option>
+                                <option value="tns">Ti-Nspire</option>
+                                <option value="image">Images</option>
+                                <option value="md">Markdown</option>
+                                <option value="tex">LaTeX</option>
+                                <option value="ipynb">Jupyter</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="overflow-x-auto">
+                        <table class="table" id="documents-table">
+                            <thead>
+                                <tr>
+                                    <th>Document</th>
+                                    <th>Type</th>
+                                    <th>Language</th>
+                                    <th>OCR</th>
+                                    <th>Nodes</th>
+                                    <th>Relationships</th>
+                                    <th>Hash</th>
+                                    <th>Added</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="documents-tbody">
+                                <tr>
+                                    <td colspan="10" class="text-center py-8 text-[var(--text-muted)]">
+                                        No documents indexed yet. Add documents to begin building your knowledge graph.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Search View -->
+            <div id="search-view" class="view-section hidden">
+                <div class="max-w-4xl mx-auto space-y-6">
+                    <div class="panel p-8">
+                        <h3 class="font-semibold text-xl text-[var(--text-primary)] mb-2 text-center">Semantic Search</h3>
+                        <p class="text-[var(--text-muted)] text-center mb-6">Danish + English + Math aware. Embedding similarity search across all content.</p>
+                        <div class="relative mb-4">
+                            <input type="text" id="search-query" placeholder="Try: 'Find my kompendium about differential equations' or 'Hvad relaterer til vektorregning?'" class="input w-full pl-10 py-4 text-[15px]">
+                            <svg class="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                            </svg>
+                            <button class="absolute right-3 top-1/2 -translate-y-1/2 btn btn-primary" onclick="performSearch()">
+                                Search
+                            </button>
+                        </div>
+                        <div class="flex items-center gap-6">
+                            <label class="flex items-center gap-2 text-sm text-[var(--text-secondary)] cursor-pointer">
+                                <label class="toggle">
+                                    <input type="checkbox" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                                Include math expressions
+                            </label>
+                            <label class="flex items-center gap-2 text-sm text-[var(--text-secondary)] cursor-pointer">
+                                <label class="toggle">
+                                    <input type="checkbox" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                                Cross-reference relationships
+                            </label>
+                            <label class="flex items-center gap-2 text-sm text-[var(--text-secondary)] cursor-pointer">
+                                <label class="toggle">
+                                    <input type="checkbox">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                                Include code files
+                            </label>
+                        </div>
+                    </div>
+
+                    <div id="search-results" class="space-y-3 hidden"></div>
+
+                    <div class="panel p-4">
+                        <h4 class="font-semibold text-[var(--text-primary)] mb-4">Example Queries</h4>
+                        <div class="grid grid-cols-2 gap-3">
+                            <button class="card hover:border-[var(--accent-primary)] text-left" onclick="setSearchQuery('Find my kompendium about differential equations')">
+                                <p class="text-xs text-[var(--info)] mb-1">Danish + Math</p>
+                                <p class="text-sm text-[var(--text-secondary)]">"Find my kompendium about differential equations"</p>
+                            </button>
+                            <button class="card hover:border-[var(--accent-primary)] text-left" onclick="setSearchQuery('What Ti-Nspire files have matrix exercises?')">
+                                <p class="text-xs text-[var(--warning)] mb-1">File Type</p>
+                                <p class="text-sm text-[var(--text-secondary)]">"What Ti-Nspire files have matrix exercises?"</p>
+                            </button>
+                            <button class="card hover:border-[var(--accent-primary)] text-left" onclick="setSearchQuery('Show me probability materials from 2.g')">
+                                <p class="text-xs text-[var(--success)] mb-1">Time Filter</p>
+                                <p class="text-sm text-[var(--text-secondary)]">"Show me probability materials from 2.g"</p>
+                            </button>
+                            <button class="card hover:border-[var(--accent-primary)] text-left" onclick="setSearchQuery('Hvad relaterer til vektorregning på tværs af alle filer?')">
+                                <p class="text-xs text-[var(--accent-secondary)] mb-1">Graph Traversal</p>
+                                <p class="text-sm text-[var(--text-secondary)]">"Hvad relaterer til vektorregning på tværs af alle filer?"</p>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Models View -->
+            <div id="models-view" class="view-section hidden">
+                <div class="max-w-5xl mx-auto space-y-6">
+                    <div class="panel p-6">
+                        <h3 class="font-semibold text-lg text-[var(--text-primary)] mb-4">Embedding Models</h3>
+                        <p class="text-[var(--text-muted)] text-sm mb-6">Local models for semantic embedding. Downloaded models are cached persistently.</p>
+                        
+                        <div class="space-y-4" id="models-list">
+                            <!-- Model cards will be inserted here -->
+                        </div>
+                    </div>
+
+                    <div class="panel p-6">
+                        <h3 class="font-semibold text-lg text-[var(--text-primary)] mb-4">Model Configuration</h3>
+                        <div class="grid grid-cols-2 gap-6">
+                            <div>
+                                <label class="block text-sm text-[var(--text-secondary)] mb-2">Primary Embedding Model</label>
+                                <select class="select w-full" id="primary-model">
+                                    <option value="multilingual-e5-large-instruct">multilingual-e5-large-instruct (Recommended)</option>
+                                    <option value="bge-large-en-v1.5">BAAI/bge-large-en-v1.5</option>
+                                    <option value="bge-m3">BAAI/bge-m3</option>
+                                    <option value="all-MiniLM-L6-v2">all-MiniLM-L6-v2 (Lightweight)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm text-[var(--text-secondary)] mb-2">Chunk Size (tokens)</label>
+                                <select class="select w-full" id="chunk-size">
+                                    <option value="512">512 tokens</option>
+                                    <option value="1024">1024 tokens</option>
+                                    <option value="2048">2048 tokens</option>
+                                    <option value="8192">8192 tokens (bge-m3 only)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm text-[var(--text-secondary)] mb-2">Similarity Threshold</label>
+                                <input type="range" min="0.5" max="0.95" step="0.05" value="0.8" class="w-full" id="similarity-threshold">
+                                <div class="flex justify-between text-xs text-[var(--text-muted)] mt-1">
+                                    <span>0.5</span>
+                                    <span class="mono" id="threshold-value">0.80</span>
+                                    <span>0.95</span>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm text-[var(--text-secondary)] mb-2">OCR Languages</label>
+                                <select class="select w-full" id="ocr-langs">
+                                    <option value="dan+eng">Danish + English</option>
+                                    <option value="dan+eng+math">Danish + English + Math</option>
+                                    <option value="eng">English Only</option>
+                                    <option value="dan">Danish Only</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Storage View -->
+            <div id="storage-view" class="view-section hidden">
+                <div class="max-w-5xl mx-auto space-y-6">
+                    <div class="panel p-6">
+                        <h3 class="font-semibold text-lg text-[var(--text-primary)] mb-4">Storage Overview</h3>
+                        <p class="text-[var(--text-muted)] text-sm mb-6">Persistent storage breakdown. All data is stored locally and persists across restarts.</p>
+                        
+                        <div class="grid grid-cols-2 gap-6 mb-6">
+                            <div class="card">
+                                <div class="flex items-center justify-between mb-3">
+                                    <span class="text-sm text-[var(--text-secondary)]">Vector Database (ChromaDB)</span>
+                                    <span class="mono text-[var(--text-primary)]" id="storage-vector">0 MB</span>
+                                </div>
+                                <div class="storage-bar">
+                                    <div class="storage-bar-fill vector" id="storage-vector-bar" style="width: 0%"></div>
+                                </div>
+                                <p class="text-xs text-[var(--text-muted)] mt-2">Embeddings for all document chunks</p>
+                            </div>
+                            <div class="card">
+                                <div class="flex items-center justify-between mb-3">
+                                    <span class="text-sm text-[var(--text-secondary)]">Graph Database (Pickle)</span>
+                                    <span class="mono text-[var(--text-primary)]" id="storage-graph">0 MB</span>
+                                </div>
+                                <div class="storage-bar">
+                                    <div class="storage-bar-fill graph" id="storage-graph-bar" style="width: 0%"></div>
+                                </div>
+                                <p class="text-xs text-[var(--text-muted)] mt-2">Knowledge graph nodes and edges</p>
+                            </div>
+                            <div class="card">
+                                <div class="flex items-center justify-between mb-3">
+                                    <span class="text-sm text-[var(--text-secondary)]">OCR Cache (SQLite)</span>
+                                    <span class="mono text-[var(--text-primary)]" id="storage-ocr">0 MB</span>
+                                </div>
+                                <div class="storage-bar">
+                                    <div class="storage-bar-fill ocr" id="storage-ocr-bar" style="width: 0%"></div>
+                                </div>
+                                <p class="text-xs text-[var(--text-muted)] mt-2">Cached OCR results for scanned PDFs</p>
+                            </div>
+                            <div class="card">
+                                <div class="flex items-center justify-between mb-3">
+                                    <span class="text-sm text-[var(--text-secondary)]">Metadata (SQLite)</span>
+                                    <span class="mono text-[var(--text-primary)]" id="storage-meta">0 MB</span>
+                                </div>
+                                <div class="storage-bar">
+                                    <div class="storage-bar-fill meta" id="storage-meta-bar" style="width: 0%"></div>
+                                </div>
+                                <p class="text-xs text-[var(--text-muted)] mt-2">Document metadata and file hashes</p>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <h4 class="font-semibold text-[var(--text-primary)] mb-4">Storage Actions</h4>
+                            <div class="grid grid-cols-3 gap-4">
+                                <button class="btn btn-secondary justify-between" onclick="clearStorage('ocr')">
+                                    <span>Clear OCR Cache</span>
+                                    <span class="text-xs text-[var(--text-muted)]">Frees space</span>
+                                </button>
+                                <button class="btn btn-secondary justify-between" onclick="clearStorage('vector')">
+                                    <span>Rebuild Vectors</span>
+                                    <span class="text-xs text-[var(--text-muted)]">Re-embed all</span>
+                                </button>
+                                <button class="btn btn-secondary justify-between" onclick="exportData()">
+                                    <span>Export Data</span>
+                                    <span class="text-xs text-[var(--text-muted)]">Backup</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="panel p-6">
+                        <h3 class="font-semibold text-lg text-[var(--text-primary)] mb-4">File Hash Database</h3>
+                        <p class="text-[var(--text-muted)] text-sm mb-4">MD5 hashes track file changes. Files are only reprocessed if hash changes.</p>
+                        <div class="overflow-x-auto">
+                            <table class="table" id="hash-table">
+                                <thead>
+                                    <tr>
+                                        <th>File Path</th>
+                                        <th>MD5 Hash</th>
+                                        <th>Size</th>
+                                        <th>Last Modified</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="hash-tbody">
+                                    <tr>
+                                        <td colspan="5" class="text-center py-8 text-[var(--text-muted)]">
+                                            No files tracked yet
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Settings View -->
+            <div id="settings-view" class="view-section hidden">
+                <div class="max-w-4xl mx-auto space-y-6">
+                    <div class="panel p-6">
+                        <h3 class="font-semibold text-lg text-[var(--text-primary)] mb-4">Processing Settings</h3>
+                        <div class="space-y-4">
+                            <div class="flex items-center justify-between py-3 border-b border-[var(--border-subtle)]">
+                                <div>
+                                    <p class="font-medium text-[var(--text-primary)]">Auto-extract relationships</p>
+                                    <p class="text-sm text-[var(--text-muted)]">Automatically infer relationships between documents</p>
+                                </div>
+                                <label class="toggle">
+                                    <input type="checkbox" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            <div class="flex items-center justify-between py-3 border-b border-[var(--border-subtle)]">
+                                <div>
+                                    <p class="font-medium text-[var(--text-primary)]">Enable OCR for images</p>
+                                    <p class="text-sm text-[var(--text-muted)]">Extract text from images using Tesseract</p>
+                                </div>
+                                <label class="toggle">
+                                    <input type="checkbox" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            <div class="flex items-center justify-between py-3 border-b border-[var(--border-subtle)]">
+                                <div>
+                                    <p class="font-medium text-[var(--text-primary)]">Parse Ti-Nspire files</p>
+                                    <p class="text-sm text-[var(--text-muted)]">Extract math expressions from .tns files</p>
+                                </div>
+                                <label class="toggle">
+                                    <input type="checkbox" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            <div class="flex items-center justify-between py-3 border-b border-[var(--border-subtle)]">
+                                <div>
+                                    <p class="font-medium text-[var(--text-primary)]">Batch Processing</p>
+                                    <p class="text-sm text-[var(--text-muted)]">Max concurrent files (prevents VRAM overflow)</p>
+                                </div>
+                                <select class="select">
+                                    <option value="1">1 file (Safe)</option>
+                                    <option value="2">2 files</option>
+                                    <option value="3" selected>3 files (Recommended)</option>
+                                    <option value="5">5 files (Fast)</option>
+                                </select>
+                            </div>
+                            <div class="flex items-center justify-between py-3">
+                                <div>
+                                    <p class="font-medium text-[var(--text-primary)]">Debug mode</p>
+                                    <p class="text-sm text-[var(--text-muted)]">Show detailed logs and error messages</p>
+                                </div>
+                                <label class="toggle">
+                                    <input type="checkbox" id="debug-mode" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="panel p-6">
+                        <h3 class="font-semibold text-lg text-[var(--text-primary)] mb-4">Danger Zone</h3>
+                        <div class="space-y-3">
+                            <button class="btn btn-secondary w-full justify-between" onclick="confirmAction('clear-cache')">
+                                <span>Clear Model Cache</span>
+                                <span class="text-[var(--text-muted)]">Frees up ~3-5 GB</span>
+                            </button>
+                            <button class="btn btn-secondary w-full justify-between" onclick="confirmAction('reset-graph')">
+                                <span>Reset Knowledge Graph</span>
+                                <span class="text-[var(--text-muted)]">Deletes all nodes and relationships</span>
+                            </button>
+                            <button class="btn btn-secondary w-full justify-between" onclick="confirmAction('factory-reset')">
+                                <span class="text-[var(--error)]">Factory Reset</span>
+                                <span class="text-[var(--text-muted)]">Deletes everything</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Debug Panel -->
+    <div id="debug-panel" class="fixed bottom-0 left-0 right-0 h-64 bg-[var(--bg-secondary)] border-t border-[var(--border-subtle)] transform translate-y-full transition-transform duration-300 z-50">
+        <div class="flex items-center justify-between px-4 py-2 border-b border-[var(--border-subtle)]">
+            <div class="flex items-center gap-3">
+                <h4 class="font-semibold text-sm text-[var(--text-primary)]">Debug Console</h4>
+                <span class="badge badge-neutral mono" id="debug-line-count">0 lines</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <button class="btn btn-ghost btn-sm" onclick="exportLogs()">Export Logs</button>
+                <button class="btn btn-ghost btn-sm" onclick="clearLog()">Clear</button>
+                <button class="btn btn-ghost btn-sm" onclick="toggleDebugPanel()">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <div class="terminal h-[calc(100%-42px)]" id="debug-console"></div>
+    </div>
+
+    <!-- Upload Modal -->
+    <div id="upload-modal" class="modal-overlay fixed inset-0 z-50 hidden items-center justify-center">
+        <div class="panel-elevated rounded-xl p-6 w-full max-w-2xl mx-4 animate-slide-up">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="font-semibold text-lg text-[var(--text-primary)]">Add Documents</h3>
+                <button class="btn btn-ghost btn-icon" onclick="closeUploadModal()">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            
+            <div class="dropzone mb-6" id="dropzone">
+                <svg class="w-12 h-12 mx-auto mb-4 text-[var(--text-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m0-3v12"/>
+                </svg>
+                <p class="text-[var(--text-primary)] font-medium mb-1">Drag & drop files here</p>
+                <p class="text-sm text-[var(--text-muted)] mb-4">or click to browse</p>
+                <div class="flex flex-wrap justify-center gap-2">
+                    <span class="badge badge-neutral">PDF</span>
+                    <span class="badge badge-neutral">DOCX</span>
+                    <span class="badge badge-neutral">Code</span>
+                    <span class="badge badge-neutral">TNS</span>
+                    <span class="badge badge-neutral">Images</span>
+                    <span class="badge badge-neutral">MD</span>
+                    <span class="badge badge-neutral">TEX</span>
+                    <span class="badge badge-neutral">IPYNB</span>
+                </div>
+                <input type="file" id="file-input" multiple class="hidden" accept=".pdf,.docx,.txt,.md,.py,.js,.cpp,.tns,.tex,.ipynb,.png,.jpg,.jpeg">
+            </div>
+            
+            <div id="upload-queue" class="space-y-3 mb-6 hidden"></div>
+            
+            <div class="flex justify-end gap-3">
+                <button class="btn btn-secondary" onclick="closeUploadModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="triggerFileSelect()">Select Files</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <script>
+        // ============================================
+        // Application State
+        // ============================================
+        const AppState = {
+            documents: [],
+            nodes: [],
+            edges: [],
+            fileHashes: {},
+            models: {
+                'multilingual-e5-large-instruct': { 
+                    name: 'multilingual-e5-large-instruct', 
+                    size: '3.5 GB', 
+                    dimensions: 1024, 
+                    downloaded: false, 
+                    downloading: false,
+                    progress: 0,
+                    description: 'Best for Danish + English + Code',
+                    vram: '3.5 GB'
+                },
+                'bge-large-en-v1.5': { 
+                    name: 'BAAI/bge-large-en-v1.5', 
+                    size: '1.34 GB', 
+                    dimensions: 1024, 
+                    downloaded: false, 
+                    downloading: false,
+                    progress: 0,
+                    description: 'Best overall retrieval quality',
+                    vram: '2.5 GB'
+                },
+                'bge-m3': { 
+                    name: 'BAAI/bge-m3', 
+                    size: '2.27 GB', 
+                    dimensions: 1024, 
+                    downloaded: false, 
+                    downloading: false,
+                    progress: 0,
+                    description: 'Better for RAG with sparse vectors (8192 tokens)',
+                    vram: '3.5 GB'
+                },
+                'all-MiniLM-L6-v2': { 
+                    name: 'all-MiniLM-L6-v2', 
+                    size: '80 MB', 
+                    dimensions: 384, 
+                    downloaded: true, 
+                    downloading: false,
+                    progress: 100,
+                    description: 'Lightweight, CPU-friendly',
+                    vram: '0.5 GB'
+                }
+            },
+            config: {
+                primaryModel: 'multilingual-e5-large-instruct',
+                chunkSize: 512,
+                similarityThreshold: 0.8,
+                ocrLanguages: 'dan+eng+math',
+                autoExtract: true,
+                enableOCR: true,
+                parseTNS: true,
+                debugMode: true,
+                maxConcurrent: 3
+            },
+            stats: {
+                documents: 0,
+                nodes: 0,
+                edges: 0,
+                queries: 0,
+                vramUsed: 0,
+                storageUsed: 0,
+                ocrDocs: 0,
+                concepts: 0,
+                similarityEdges: 0
+            },
+            fileCounts: {
+                pdf: 0,
+                docx: 0,
+                code: 0,
+                tns: 0,
+                image: 0,
+                md: 0,
+                tex: 0,
+                ipynb: 0
+            },
+            storage: {
+                vector: 0,
+                graph: 0,
+                ocr: 0,
+                meta: 0
+            },
+            pipeline: {
+                status: 'idle',
+                currentStep: 0,
+                steps: ['parse', 'language', 'math', 'embed', 'entity', 'graph', 'store']
+            }
+        };
+
+        let previewNetwork = null;
+        let fullNetwork = null;
+        let currentView = 'dashboard';
+
+        // ============================================
+        // Logger System
+        // ============================================
+        const Logger = {
+            lines: [],
+            maxLines: 1000,
+
+            log(message, level = 'info') {
+                const timestamp = new Date().toLocaleTimeString('en-US', { hour12: false });
+                const line = { timestamp, message, level, id: Date.now() + Math.random() };
+                this.lines.push(line);
+                
+                if (this.lines.length > this.maxLines) {
+                    this.lines.shift();
+                }
+
+                this.render();
+                this.updateDebugPanel();
+            },
+
+            debug(message) { this.log(message, 'debug'); },
+            info(message) { this.log(message, 'info'); },
+            success(message) { this.log(message, 'success'); },
+            warning(message) { this.log(message, 'warning'); },
+            error(message) { this.log(message, 'error'); },
+
+            render() {
+                const logContainer = document.getElementById('system-log');
+                const recentLines = this.lines.slice(-30);
+                
+                logContainer.innerHTML = recentLines.map(line => `
+                    <div class="terminal-line ${line.level}">
+                        <span class="terminal-timestamp">${line.timestamp}</span>
+                        <span>${this.escapeHtml(line.message)}</span>
+                    </div>
+                `).join('');
+
+                logContainer.scrollTop = logContainer.scrollHeight;
+            },
+
+            updateDebugPanel() {
+                const debugConsole = document.getElementById('debug-console');
+                const lineCount = document.getElementById('debug-line-count');
+                
+                debugConsole.innerHTML = this.lines.map(line => `
+                    <div class="terminal-line log-${line.level}">
+                        <span class="terminal-timestamp">${line.timestamp}</span>
+                        <span class="mono">[${line.level.toUpperCase()}]</span>
+                        <span>${this.escapeHtml(line.message)}</span>
+                    </div>
+                `).join('');
+
+                lineCount.textContent = `${this.lines.length} lines`;
+                debugConsole.scrollTop = debugConsole.scrollHeight;
+            },
+
+            clear() {
+                this.lines = [];
+                this.render();
+                this.updateDebugPanel();
+                Logger.info('Log cleared');
+            },
+
+            escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            },
+
+            export() {
+                const content = this.lines.map(line => 
+                    `[${line.timestamp}] [${line.level.toUpperCase()}] ${line.message}`
+                ).join('\n');
+                
+                const blob = new Blob([content], { type: 'text/plain' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `neurograph-log-${new Date().toISOString().slice(0,10)}.txt`;
+                a.click();
+                URL.revokeObjectURL(url);
+                
+                Toast.success('Logs exported successfully');
+            }
+        };
+
+        // ============================================
+        // Toast Notification System
+        // ============================================
+        const Toast = {
+            show(message, type = 'info', duration = 4000) {
+                const container = document.getElementById('toast-container');
+                const toast = document.createElement('div');
+                toast.className = `toast ${type}`;
+                
+                const icons = {
+                    success: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>',
+                    error: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>',
+                    warning: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>',
+                    info: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>'
+                };
+
+                toast.innerHTML = `
+                    <div class="flex-shrink-0">${icons[type]}</div>
+                    <span class="text-sm text-[var(--text-primary)]">${message}</span>
+                    <button class="ml-auto btn btn-ghost btn-icon" onclick="this.parentElement.remove()">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                `;
+
+                container.appendChild(toast);
+
+                setTimeout(() => {
+                    toast.style.animation = 'slideUp 0.3s ease reverse';
+                    setTimeout(() => toast.remove(), 300);
+                }, duration);
+            },
+
+            success(message) { this.show(message, 'success'); },
+            error(message) { this.show(message, 'error'); },
+            warning(message) { this.show(message, 'warning'); },
+            info(message) { this.show(message, 'info'); }
+        };
+
+        // ============================================
+        // View Navigation
+        // ============================================
+        function switchView(viewName) {
+            document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            
+            document.getElementById(`${viewName}-view`).classList.remove('hidden');
+            document.querySelector(`[data-view="${viewName}"]`)?.classList.add('active');
+            
+            currentView = viewName;
+            
+            const titles = {
+                dashboard: ['Dashboard', 'System overview and statistics'],
+                pipeline: ['Processing Pipeline', 'Content analysis and indexing workflow'],
+                graph: ['Graph Explorer', 'Visualize and explore concept relationships'],
+                documents: ['Documents', 'Manage your document library'],
+                search: ['Semantic Search', 'Search across all content'],
+                models: ['Models', 'Manage embedding models'],
+                storage: ['Storage', 'Persistent storage management'],
+                settings: ['Settings', 'Configure system options']
+            };
+            
+            document.getElementById('page-title').textContent = titles[viewName][0];
+            document.getElementById('page-subtitle').textContent = titles[viewName][1];
+            
+            if (viewName === 'graph') {
+                setTimeout(initFullGraph, 100);
+            }
+            
+            if (viewName === 'models') {
+                renderModelsList();
+            }
+
+            if (viewName === 'storage') {
+                updateStorageView();
+            }
+
+            Logger.info(`Switched to ${viewName} view`);
+        }
+
+        // ============================================
+        // Graph Visualization
+        // ============================================
+        function initPreviewGraph() {
+            const container = document.getElementById('graph-preview');
+            const data = {
+                nodes: new vis.DataSet([]),
+                edges: new vis.DataSet([])
+            };
+            
+            const options = {
+                nodes: {
+                    shape: 'dot',
+                    font: { color: '#a1a1aa', size: 11 },
+                    borderWidth: 2,
+                    shadow: { enabled: true, color: 'rgba(0,0,0,0.5)' }
+                },
+                edges: {
+                    color: { color: '#3a3a45', highlight: '#6366f1' },
+                    font: { color: '#71717a', size: 9 },
+                    smooth: { type: 'continuous' },
+                    arrows: { to: { enabled: true, scaleFactor: 0.5 } }
+                },
+                groups: {
+                    concept: { color: { background: '#6366f1', border: '#818cf8' } },
+                    document: { color: { background: '#14b8a6', border: '#5eead4' } },
+                    project: { color: { background: '#a855f7', border: '#c084fc' } },
+                    file: { color: { background: '#f59e0b', border: '#fbbf24' } },
+                    math: { color: { background: '#06b6d4', border: '#67e8f9' } }
+                },
+                physics: {
+                    enabled: true,
+                    barnesHut: {
+                        gravitationalConstant: -2000,
+                        centralGravity: 0.3,
+                        springLength: 100
+                    },
+                    stabilization: { iterations: 50 }
+                },
+                interaction: {
+                    hover: true,
+                    dragNodes: true,
+                    zoomView: false,
+                    dragView: false
+                }
+            };
+            
+            previewNetwork = new vis.Network(container, data, options);
+            Logger.debug('Preview graph initialized');
+        }
+
+        function initFullGraph() {
+            const container = document.getElementById('full-graph');
+            const data = {
+                nodes: new vis.DataSet(AppState.nodes),
+                edges: new vis.DataSet(AppState.edges)
+            };
+            
+            const options = {
+                nodes: {
+                    shape: 'dot',
+                    font: { color: '#f4f4f5', size: 13 },
+                    borderWidth: 2,
+                    shadow: { enabled: true, color: 'rgba(0,0,0,0.5)' }
+                },
+                edges: {
+                    color: { color: '#3a3a45', highlight: '#6366f1' },
+                    font: { color: '#71717a', size: 10, align: 'middle' },
+                    smooth: { type: 'continuous' },
+                    arrows: { to: { enabled: true, scaleFactor: 0.5 } }
+                },
+                groups: {
+                    concept: { color: { background: '#6366f1', border: '#818cf8' } },
+                    document: { color: { background: '#14b8a6', border: '#5eead4' } },
+                    project: { color: { background: '#a855f7', border: '#c084fc' } },
+                    file: { color: { background: '#f59e0b', border: '#fbbf24' } },
+                    math: { color: { background: '#06b6d4', border: '#67e8f9' } }
+                },
+                physics: {
+                    enabled: true,
+                    barnesHut: {
+                        gravitationalConstant: -3000,
+                        centralGravity: 0.3,
+                        springLength: 150,
+                        springConstant: 0.04
+                    },
+                    stabilization: { iterations: 100 }
+                },
+                interaction: {
+                    hover: true,
+                    dragNodes: true,
+                    zoomView: true,
+                    dragView: true,
+                    multiselect: true
+                }
+            };
+            
+            if (fullNetwork) {
+                fullNetwork.destroy();
+            }
+            
+            fullNetwork = new vis.Network(container, data, options);
+            
+            fullNetwork.on('click', function(params) {
+                if (params.nodes.length > 0) {
+                    const nodeId = params.nodes[0];
+                    const node = AppState.nodes.find(n => n.id === nodeId);
+                    if (node) {
+                        showNodeDetails(node);
+                    }
+                } else {
+                    document.getElementById('node-details').innerHTML = `
+                        <div class="text-center py-12 text-[var(--text-muted)]">
+                            <svg class="w-12 h-12 mx-auto mb-3 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"/>
+                            </svg>
+                            <p class="text-sm">Select a node to view details</p>
+                        </div>
+                    `;
+                }
+            });
+            
+            Logger.debug('Full graph initialized');
+        }
+
+        function showNodeDetails(node) {
+            const relationships = AppState.edges.filter(e => e.from === node.id || e.to === node.id);
+            const connected = relationships.map(r => {
+                const otherId = r.from === node.id ? r.to : r.from;
+                const otherNode = AppState.nodes.find(n => n.id === otherId);
+                const direction = r.from === node.id ? '→' : '←';
+                return `
+                    <div class="flex items-center gap-2 py-2 border-b border-[var(--border-subtle)] last:border-0">
+                        <span class="text-xs text-[var(--text-muted)]">${r.label}</span>
+                        <span class="text-[var(--accent-secondary)]">${direction}</span>
+                        <span class="text-sm text-[var(--text-primary)]">${otherNode?.label || 'Unknown'}</span>
+                    </div>
+                `;
+            }).join('') || '<p class="text-sm text-[var(--text-muted)]">No relationships</p>';
+            
+            document.getElementById('node-details').innerHTML = `
+                <div class="mb-4">
+                    <div class="w-16 h-16 rounded-xl bg-gradient-to-br from-[var(--accent-primary)] to-[#a855f7] flex items-center justify-center mb-3">
+                        <span class="text-2xl font-bold text-white">${node.label.charAt(0)}</span>
+                    </div>
+                    <h4 class="font-semibold text-lg text-[var(--text-primary)]">${node.label}</h4>
+                    <span class="badge badge-neutral mt-2">${node.group}</span>
+                </div>
+                <div class="mb-4">
+                    <h5 class="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider mb-2">Relationships (${relationships.length})</h5>
+                    ${connected}
+                </div>
+                <div class="space-y-2">
+                    <button class="btn btn-secondary w-full justify-between text-sm" onclick="searchNode('${node.label}')">
+                        <span>Search Related</span>
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                        </svg>
+                    </button>
+                </div>
+            `;
+
+            Logger.info(`Viewed node: ${node.label}`);
+        }
+
+        function searchNode(nodeName) {
+            document.getElementById('search-query').value = nodeName;
+            switchView('search');
+            performSearch();
+        }
+
+        function resetGraph() {
+            if (fullNetwork) {
+                fullNetwork.fit({ animation: { duration: 500 } });
+            }
+            if (previewNetwork) {
+                previewNetwork.fit({ animation: { duration: 500 } });
+            }
+            Logger.debug('Graph view reset');
+        }
+
+        function zoomIn() {
+            if (fullNetwork) {
+                const scale = fullNetwork.getScale();
+                fullNetwork.moveTo({ scale: Math.min(scale * 1.3, 5), animation: { duration: 300 } });
+            }
+        }
+
+        function zoomOut() {
+            if (fullNetwork) {
+                const scale = fullNetwork.getScale();
+                fullNetwork.moveTo({ scale: Math.max(scale * 0.7, 0.1), animation: { duration: 300 } });
+            }
+        }
+
+        // ============================================
+        // File Upload & Batch Processing
+        // ============================================
+        function openUploadModal() {
+            document.getElementById('upload-modal').classList.remove('hidden');
+            document.getElementById('upload-modal').classList.add('flex');
+            Logger.info('Upload modal opened');
+        }
+
+        function closeUploadModal() {
+            document.getElementById('upload-modal').classList.add('hidden');
+            document.getElementById('upload-modal').classList.remove('flex');
+            document.getElementById('upload-queue').innerHTML = '';
+            document.getElementById('upload-queue').classList.add('hidden');
+        }
+
+        function triggerFileSelect() {
+            document.getElementById('file-input').click();
+        }
+
+        const dropzone = document.getElementById('dropzone');
+        const fileInput = document.getElementById('file-input');
+
+        dropzone.addEventListener('click', () => fileInput.click());
+        
+        dropzone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropzone.classList.add('dragover');
+        });
+
+        dropzone.addEventListener('dragleave', () => {
+            dropzone.classList.remove('dragover');
+        });
+
+        dropzone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropzone.classList.remove('dragover');
+            const files = Array.from(e.dataTransfer.files);
+            processFiles(files);
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            const files = Array.from(e.target.files);
+            processFiles(files);
+        });
+
+        function processFiles(files) {
+            if (files.length === 0) return;
+
+            const queue = document.getElementById('upload-queue');
+            queue.classList.remove('hidden');
+            queue.innerHTML = '';
+
+            files.forEach((file, index) => {
+                const fileType = getFileType(file.name);
+                const fileHash = generateFileHash(file);
+                const queueItem = document.createElement('div');
+                queueItem.className = 'batch-item';
+                queueItem.id = `upload-item-${index}`;
+                queueItem.innerHTML = `
+                    <div class="file-icon ${fileType} flex-shrink-0">${file.name.split('.').pop().toUpperCase().slice(0,3)}</div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center justify-between mb-1">
+                            <p class="text-sm font-medium text-[var(--text-primary)] truncate">${file.name}</p>
+                            <span class="hash-display">${fileHash.slice(0, 8)}...</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs text-[var(--text-muted)]">${formatFileSize(file.size)}</span>
+                            <div class="progress">
+                                <div class="progress-bar" style="width: 0%" id="progress-${index}"></div>
+                            </div>
+                            <span class="text-xs text-[var(--text-muted)] mono" id="percent-${index}">0%</span>
+                        </div>
+                    </div>
+                    <span class="badge badge-warning" id="status-${index}">Queued</span>
+                `;
+                queue.appendChild(queueItem);
+                
+                // Store hash for deduplication
+                AppState.fileHashes[file.name] = fileHash;
+            });
+
+            // Process files with batch limit
+            const batchSize = AppState.config.maxConcurrent;
+            for (let i = 0; i < files.length; i += batchSize) {
+                const batch = files.slice(i, i + batchSize);
+                batch.forEach((file, batchIndex) => {
+                    setTimeout(() => simulateUpload(file, i + batchIndex), batchIndex * 300);
+                });
+            }
+
+            Logger.info(`Processing ${files.length} file(s) in batches of ${batchSize}`);
+        }
+
+        function generateFileHash(file) {
+            // Simulate MD5 hash generation
+            const chars = '0123456789abcdef';
+            let hash = '';
+            for (let i = 0; i < 32; i++) {
+                hash += chars[Math.floor(Math.random() * 16)];
+            }
+            return hash;
+        }
+
+        function getFileType(filename) {
+            const ext = filename.split('.').pop().toLowerCase();
+            const typeMap = {
+                'pdf': 'pdf',
+                'docx': 'docx',
+                'doc': 'docx',
+                'py': 'code',
+                'js': 'code',
+                'cpp': 'code',
+                'ts': 'code',
+                'tns': 'tns',
+                'png': 'image',
+                'jpg': 'image',
+                'jpeg': 'image',
+                'md': 'md',
+                'txt': 'md',
+                'tex': 'tex',
+                'ipynb': 'ipynb'
+            };
+            return typeMap[ext] || 'code';
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+        }
+
+        function simulateUpload(file, index) {
+            const statusEl = document.getElementById(`status-${index}`);
+            const progressEl = document.getElementById(`progress-${index}`);
+            const percentEl = document.getElementById(`percent-${index}`);
+            
+            // Check if file already processed (hash-based deduplication)
+            const fileHash = AppState.fileHashes[file.name];
+            if (AppState.documents.find(d => d.hash === fileHash)) {
+                statusEl.className = 'badge badge-info';
+                statusEl.textContent = 'Skipped (unchanged)';
+                Logger.debug(`Skipped ${file.name} - hash unchanged`);
+                return;
+            }
+            
+            statusEl.className = 'badge badge-info';
+            statusEl.textContent = 'Processing';
+            
+            const fileType = getFileType(file.name);
+            Logger.info(`Processing: ${file.name} (${fileType})`);
+            
+            let progress = 0;
+            const interval = setInterval(() => {
+                progress += Math.random() * 15 + 5;
+                if (progress >= 100) {
+                    progress = 100;
+                    clearInterval(interval);
+                    
+                    statusEl.className = 'badge badge-success';
+                    statusEl.textContent = 'Complete';
+                    progressEl.classList.add('progress-bar-success');
+                    
+                    // Determine if OCR was needed
+                    const needsOCR = fileType === 'image' || (fileType === 'pdf' && Math.random() > 0.7);
+                    const language = Math.random() > 0.5 ? 'da' : (Math.random() > 0.5 ? 'en' : 'mixed');
+                    
+                    // Update stats
+                    AppState.fileCounts[fileType]++;
+                    AppState.stats.documents++;
+                    if (needsOCR) AppState.stats.ocrDocs++;
+                    
+                    const nodes = Math.floor(Math.random() * 30) + 10;
+                    const edges = Math.floor(Math.random() * 50) + 20;
+                    AppState.stats.nodes += nodes;
+                    AppState.stats.edges += edges;
+                    AppState.stats.concepts += Math.floor(nodes * 0.6);
+                    AppState.stats.similarityEdges += Math.floor(edges * 0.3);
+                    
+                    // Add to documents list
+                    AppState.documents.push({
+                        id: Date.now() + index,
+                        name: file.name,
+                        type: fileType,
+                        size: file.size,
+                        hash: fileHash,
+                        nodes: nodes,
+                        edges: edges,
+                        language: language,
+                        ocr: needsOCR,
+                        added: new Date().toISOString(),
+                        status: 'indexed'
+                    });
+                    
+                    // Add sample nodes to graph
+                    AppState.nodes.push({
+                        id: Date.now() + index,
+                        label: file.name.split('.')[0],
+                        group: 'document',
+                        size: 20
+                    });
+                    
+                    updateStats();
+                    renderDocumentsTable();
+                    updateHashTracking();
+                    updateGraphPreview();
+                    
+                    setTimeout(() => {
+                        document.getElementById(`upload-item-${index}`)?.remove();
+                    }, 2000);
+                    
+                    Logger.success(`Completed: ${file.name}${needsOCR ? ' (OCR applied)' : ''}`);
+                    Toast.success(`${file.name} processed successfully`);
+                } else {
+                    progressEl.style.width = `${progress}%`;
+                    percentEl.textContent = `${Math.round(progress)}%`;
+                }
+            }, 200);
+        }
+
+        // ============================================
+        // Pipeline Demo
+        // ============================================
+        function runPipelineDemo() {
+            if (AppState.pipeline.status === 'processing') {
+                Toast.warning('Pipeline already running');
+                return;
+            }
+
+            AppState.pipeline.status = 'processing';
+            document.getElementById('pipeline-status').className = 'badge badge-info';
+            document.getElementById('pipeline-status').textContent = 'Processing';
+
+            const steps = AppState.pipeline.steps;
+            let currentStep = 0;
+
+            function runStep() {
+                if (currentStep >= steps.length) {
+                    AppState.pipeline.status = 'idle';
+                    document.getElementById('pipeline-status').className = 'badge badge-success';
+                    document.getElementById('pipeline-status').textContent = 'Complete';
+                    Toast.success('Pipeline demo completed');
+                    Logger.success('Pipeline execution complete');
+                    return;
+                }
+
+                const stepId = steps[currentStep];
+                const stepEl = document.getElementById(`step-${stepId}`);
+                const statusEl = document.getElementById(`step-${stepId}-status`);
+
+                // Reset all steps
+                steps.forEach(s => {
+                    document.getElementById(`step-${s}`).className = 'pipeline-step pending';
+                    document.getElementById(`step-${s}-status`).className = 'badge badge-neutral';
+                    document.getElementById(`step-${s}-status`).textContent = 'Pending';
+                });
+
+                // Set current step to processing
+                stepEl.className = 'pipeline-step processing';
+                statusEl.className = 'badge badge-warning';
+                statusEl.textContent = 'Processing';
+
+                const stepNames = {
+                    'parse': 'Document Parsing',
+                    'language': 'Language Detection',
+                    'math': 'Math Extraction',
+                    'embed': 'Semantic Embedding',
+                    'entity': 'Entity Extraction',
+                    'graph': 'Graph Construction',
+                    'store': 'Persistent Storage'
+                };
+
+                Logger.info(`Step ${currentStep + 1}/7: ${stepNames[stepId]}`);
+
+                setTimeout(() => {
+                    stepEl.className = 'pipeline-step completed';
+                    statusEl.className = 'badge badge-success';
+                    statusEl.textContent = 'Complete';
+                    currentStep++;
+                    runStep();
+                }, 1500);
+            }
+
+            runStep();
+        }
+
+        // ============================================
+        // Statistics & UI Updates
+        // ============================================
+        function updateStats() {
+            animateNumber('stat-docs', AppState.stats.documents);
+            animateNumber('stat-nodes', AppState.stats.nodes);
+            animateNumber('stat-edges', AppState.stats.edges);
+            animateNumber('stat-queries', AppState.stats.queries);
+            
+            document.getElementById('ocr-count').textContent = AppState.stats.ocrDocs;
+            document.getElementById('concepts-count').textContent = AppState.stats.concepts;
+            document.getElementById('similarity-count').textContent = AppState.stats.similarityEdges;
+            
+            document.getElementById('count-pdf').textContent = `${AppState.fileCounts.pdf} files`;
+            document.getElementById('count-docx').textContent = `${AppState.fileCounts.docx} files`;
+            document.getElementById('count-code').textContent = `${AppState.fileCounts.code} files`;
+            document.getElementById('count-tns').textContent = `${AppState.fileCounts.tns} files`;
+            document.getElementById('count-image').textContent = `${AppState.fileCounts.image} files`;
+            document.getElementById('count-md').textContent = `${AppState.fileCounts.md} files`;
+            document.getElementById('count-tex').textContent = `${AppState.fileCounts.tex} files`;
+            document.getElementById('count-ipynb').textContent = `${AppState.fileCounts.ipynb} files`;
+            
+            document.getElementById('doc-count').textContent = `${AppState.documents.length} documents`;
+            
+            const vramUsed = 0.8 + (AppState.stats.nodes / 1000) * 0.5;
+            AppState.stats.vramUsed = Math.min(vramUsed, 8);
+            updateVRAMDisplay();
+            
+            AppState.stats.storageUsed = AppState.documents.reduce((acc, doc) => acc + doc.size, 0);
+            updateStorageDisplay();
+        }
+
+        function animateNumber(elementId, target) {
+            const element = document.getElementById(elementId);
+            const current = parseInt(element.textContent.replace(/,/g, '')) || 0;
+            if (current >= target) return;
+            
+            const increment = Math.ceil((target - current) / 20);
+            let value = current;
+            const interval = setInterval(() => {
+                value += increment;
+                if (value >= target) {
+                    value = target;
+                    clearInterval(interval);
+                }
+                element.textContent = value.toLocaleString();
+            }, 30);
+        }
+
+        function updateVRAMDisplay() {
+            const vramPercent = (AppState.stats.vramUsed / 8) * 100;
+            const vramMeter = document.getElementById('vram-meter');
+            const vramText = document.getElementById('vram-text');
+            
+            vramMeter.style.width = `${vramPercent}%`;
+            vramText.textContent = `${AppState.stats.vramUsed.toFixed(1)} / 8.0 GB`;
+            
+            vramMeter.classList.remove('safe', 'warning', 'danger');
+            if (vramPercent < 60) vramMeter.classList.add('safe');
+            else if (vramPercent < 85) vramMeter.classList.add('warning');
+            else vramMeter.classList.add('danger');
+        }
+
+        function updateStorageDisplay() {
+            const storagePercent = (AppState.stats.storageUsed / (100 * 1024 * 1024 * 1024)) * 100;
+            const storageMeter = document.getElementById('storage-meter');
+            const storageText = document.getElementById('storage-text');
+            
+            storageMeter.style.width = `${storagePercent}%`;
+            storageText.textContent = `${formatFileSize(AppState.stats.storageUsed)} / 100 GB`;
+        }
+
+        function updateStorageView() {
+            // Simulate storage breakdown
+            AppState.storage.vector = AppState.stats.nodes * 4;
+            AppState.storage.graph = AppState.stats.nodes * 0.1;
+            AppState.storage.ocr = AppState.stats.ocrDocs * 50;
+            AppState.storage.meta = AppState.stats.documents * 1;
+
+            document.getElementById('storage-vector').textContent = `${AppState.storage.vector.toFixed(1)} MB`;
+            document.getElementById('storage-graph').textContent = `${AppState.storage.graph.toFixed(1)} MB`;
+            document.getElementById('storage-ocr').textContent = `${AppState.storage.ocr.toFixed(1)} MB`;
+            document.getElementById('storage-meta').textContent = `${AppState.storage.meta.toFixed(1)} MB`;
+
+            document.getElementById('storage-vector-bar').style.width = `${Math.min(AppState.storage.vector / 5, 100)}%`;
+            document.getElementById('storage-graph-bar').style.width = `${Math.min(AppState.storage.graph / 5, 100)}%`;
+            document.getElementById('storage-ocr-bar').style.width = `${Math.min(AppState.storage.ocr / 5, 100)}%`;
+            document.getElementById('storage-meta-bar').style.width = `${Math.min(AppState.storage.meta / 5, 100)}%`;
+        }
+
+        function updateHashTracking() {
+            const tbody = document.getElementById('hash-tbody');
+            if (Object.keys(AppState.fileHashes).length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center py-8 text-[var(--text-muted)]">No files tracked yet</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = Object.entries(AppState.fileHashes).slice(-10).map(([name, hash]) => `
+                <tr>
+                    <td class="font-mono text-xs">${name}</td>
+                    <td class="font-mono text-xs text-[var(--text-muted)]">${hash}</td>
+                    <td class="text-xs text-[var(--text-secondary)]">-</td>
+                    <td class="text-xs text-[var(--text-secondary)]">Just now</td>
+                    <td><span class="badge badge-success">Tracked</span></td>
+                </tr>
+            `).join('');
+        }
+
+        // ============================================
+        // Documents Table
+        // ============================================
+        function renderDocumentsTable() {
+            const tbody = document.getElementById('documents-tbody');
+            
+            if (AppState.documents.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="10" class="text-center py-8 text-[var(--text-muted)]">No documents indexed yet.</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = AppState.documents.map(doc => `
+                <tr class="hover:bg-[var(--bg-tertiary)]">
+                    <td>
+                        <div class="flex items-center gap-3">
+                            <div class="file-icon ${doc.type}">${doc.name.split('.').pop().toUpperCase().slice(0,3)}</div>
+                            <div>
+                                <p class="font-medium text-[var(--text-primary)]">${doc.name}</p>
+                                <p class="text-xs text-[var(--text-muted)]">${formatFileSize(doc.size)}</p>
+                            </div>
+                        </div>
+                    </td>
+                    <td><span class="badge badge-neutral uppercase">${doc.type}</span></td>
+                    <td><span class="language-badge ${doc.language}">${doc.language.toUpperCase()}</span></td>
+                    <td>${doc.ocr ? '<span class="badge badge-info">Yes</span>' : '<span class="text-[var(--text-muted)]">-</span>'}</td>
+                    <td class="mono">${doc.nodes}</td>
+                    <td class="mono">${doc.edges}</td>
+                    <td><span class="hash-display">${doc.hash.slice(0, 8)}...</span></td>
+                    <td class="text-[var(--text-muted)]">${new Date(doc.added).toLocaleDateString()}</td>
+                    <td><span class="badge badge-success">Indexed</span></td>
+                    <td>
+                        <div class="flex items-center gap-1">
+                            <button class="btn btn-ghost btn-icon" onclick="viewDocument(${doc.id})" data-tooltip="View">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                </svg>
+                            </button>
+                            <button class="btn btn-ghost btn-icon" onclick="deleteDocument(${doc.id})" data-tooltip="Delete">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function updateGraphPreview() {
+            if (previewNetwork && AppState.nodes.length > 0) {
+                previewNetwork.setData({
+                    nodes: new vis.DataSet(AppState.nodes.slice(-10)),
+                    edges: new vis.DataSet(AppState.edges.slice(-10))
+                });
+            }
+        }
+
+        function viewDocument(docId) {
+            const doc = AppState.documents.find(d => d.id === docId);
+            if (doc) {
+                Logger.info(`Viewing document: ${doc.name}`);
+                Toast.info(`Opening ${doc.name}...`);
+            }
+        }
+
+        function deleteDocument(docId) {
+            if (confirm('Are you sure you want to delete this document?')) {
+                const index = AppState.documents.findIndex(d => d.id === docId);
+                if (index > -1) {
+                    const doc = AppState.documents[index];
+                    AppState.documents.splice(index, 1);
+                    AppState.stats.documents--;
+                    updateStats();
+                    renderDocumentsTable();
+                    Logger.warning(`Deleted document: ${doc.name}`);
+                    Toast.success('Document deleted');
+                }
+            }
+        }
+
+        // ============================================
+        // Search Functionality
+        // ============================================
+        function setSearchQuery(query) {
+            document.getElementById('search-query').value = query;
+        }
+
+        function performSearch() {
+            const query = document.getElementById('search-query').value.trim();
+            if (!query) {
+                Toast.warning('Please enter a search query');
+                return;
+            }
+            
+            AppState.stats.queries++;
+            document.getElementById('stat-queries').textContent = AppState.stats.queries.toLocaleString();
+            
+            const resultsDiv = document.getElementById('search-results');
+            resultsDiv.classList.remove('hidden');
+            
+            if (AppState.documents.length === 0) {
+                resultsDiv.innerHTML = `
+                    <div class="panel p-8 text-center">
+                        <svg class="w-12 h-12 mx-auto mb-4 text-[var(--text-muted)] opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                        </svg>
+                        <p class="text-[var(--text-secondary)]">No documents to search. Add documents first.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            resultsDiv.innerHTML = `
+                <div class="flex items-center justify-between mb-4">
+                    <h4 class="font-semibold text-[var(--text-primary)]">Search Results for "${query}"</h4>
+                    <span class="badge badge-info">${AppState.documents.length} results</span>
+                </div>
+                ${AppState.documents.slice(0, 5).map(doc => `
+                    <div class="search-result-card" onclick="viewDocument(${doc.id})">
+                        <div class="flex items-center gap-3 mb-2">
+                            <span class="badge badge-neutral uppercase">${doc.type}</span>
+                            <span class="badge badge-success">${(Math.random() * 30 + 70).toFixed(0)}% match</span>
+                            <span class="language-badge ${doc.language}">${doc.language.toUpperCase()}</span>
+                        </div>
+                        <h5 class="font-medium text-[var(--text-primary)] mb-1">${doc.name}</h5>
+                        <p class="text-sm text-[var(--text-muted)] mb-3">...search result preview for "${query}". This would show relevant excerpts from the document with highlighted matches...</p>
+                        <div class="flex items-center gap-4 text-xs text-[var(--text-muted)]">
+                            <span>${doc.nodes} nodes</span>
+                            <span>${doc.edges} relationships</span>
+                            <span>${doc.ocr ? 'OCR' : 'Text'}</span>
+                        </div>
+                    </div>
+                `).join('')}
+            `;
+            
+            Logger.info(`Search executed: "${query}"`);
+        }
+
+        // ============================================
+        // Models Management
+        // ============================================
+        function renderModelsList() {
+            const container = document.getElementById('models-list');
+            
+            container.innerHTML = Object.entries(AppState.models).map(([key, model]) => `
+                <div class="model-card ${model.downloaded ? 'active' : ''}">
+                    <div class="flex items-start justify-between">
+                        <div class="flex-1">
+                            <div class="flex items-center gap-3 mb-2">
+                                <h4 class="font-semibold text-[var(--text-primary)]">${model.name}</h4>
+                                ${model.downloaded 
+                                    ? '<span class="badge badge-success">Downloaded</span>' 
+                                    : model.downloading 
+                                        ? '<span class="badge badge-info">Downloading...</span>'
+                                        : '<span class="badge badge-neutral">Not Installed</span>'
+                                }
+                            </div>
+                            <p class="text-sm text-[var(--text-muted)] mb-3">${model.description}</p>
+                            <table class="spec-table">
+                                <tr><td>Size</td><td>${model.size}</td></tr>
+                                <tr><td>Dimensions</td><td>${model.dimensions}</td></tr>
+                                <tr><td>VRAM Usage</td><td>${model.vram}</td></tr>
+                            </table>
+                        </div>
+                        <div class="flex flex-col items-end gap-2">
+                            ${model.downloaded 
+                                ? `<button class="btn btn-secondary btn-sm" onclick="deleteModel('${key}')">Delete</button>`
+                                : model.downloading
+                                    ? `<div class="w-32"><div class="progress mb-1"><div class="progress-bar" style="width: ${model.progress}%"></div></div><span class="text-xs text-[var(--text-muted)] mono">${model.progress}%</span></div>`
+                                    : `<button class="btn btn-primary btn-sm" onclick="downloadModel('${key}')">Download</button>`
+                            }
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function downloadModel(modelKey) {
+            const model = AppState.models[modelKey];
+            if (!model || model.downloaded || model.downloading) return;
+            
+            model.downloading = true;
+            model.progress = 0;
+            renderModelsList();
+            
+            Logger.info(`Starting download: ${model.name}`);
+            Toast.info(`Downloading ${model.name}...`);
+            
+            const interval = setInterval(() => {
+                model.progress += Math.random() * 10 + 5;
+                if (model.progress >= 100) {
+                    model.progress = 100;
+                    model.downloading = false;
+                    model.downloaded = true;
+                    clearInterval(interval);
+                    
+                    Logger.success(`Download complete: ${model.name}`);
+                    Toast.success(`${model.name} downloaded successfully`);
+                    renderModelsList();
+                } else {
+                    renderModelsList();
+                }
+            }, 300);
+        }
+
+        function deleteModel(modelKey) {
+            const model = AppState.models[modelKey];
+            if (!model || !model.downloaded) return;
+            
+            if (confirm(`Delete ${model.name}? This will free up ${model.size} of storage.`)) {
+                model.downloaded = false;
+                model.progress = 0;
+                renderModelsList();
+                Logger.warning(`Deleted model: ${model.name}`);
+                Toast.success(`${model.name} deleted`);
+            }
+        }
+
+        // ============================================
+        // Storage Actions
+        // ============================================
+        function clearStorage(type) {
+            const types = {
+                'ocr': { name: 'OCR Cache', success: 'OCR cache cleared' },
+                'vector': { name: 'Vector Database', success: 'Vectors rebuilt' }
+            };
+            
+            if (confirm(`Clear ${types[type].name}?`)) {
+                if (type === 'ocr') {
+                    AppState.storage.ocr = 0;
+                    AppState.stats.ocrDocs = 0;
+                }
+                updateStorageView();
+                updateStats();
+                Logger.warning(`Cleared ${types[type].name}`);
+                Toast.success(types[type].success);
+            }
+        }
+
+        function exportData() {
+            const data = {
+                documents: AppState.documents,
+                stats: AppState.stats,
+                config: AppState.config
+            };
+            
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `neurograph-backup-${new Date().toISOString().slice(0,10)}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            Logger.info('Data exported');
+            Toast.success('Data exported successfully');
+        }
+
+        // ============================================
+        // Debug Panel
+        // ============================================
+        function toggleDebugPanel() {
+            const panel = document.getElementById('debug-panel');
+            panel.classList.toggle('translate-y-full');
+        }
+
+        function clearLog() {
+            Logger.clear();
+        }
+
+        function exportLogs() {
+            Logger.export();
+        }
+
+        // ============================================
+        // Settings
+        // ============================================
+        document.getElementById('similarity-threshold').addEventListener('input', (e) => {
+            AppState.config.similarityThreshold = parseFloat(e.target.value);
+            document.getElementById('threshold-value').textContent = AppState.config.similarityThreshold.toFixed(2);
+        });
+
+        function confirmAction(action) {
+            const actions = {
+                'clear-cache': { message: 'Clear all downloaded model caches?', success: 'Model cache cleared' },
+                'reset-graph': { message: 'Reset the knowledge graph?', success: 'Knowledge graph reset' },
+                'factory-reset': { message: 'FACTORY RESET: Delete ALL data?', success: 'Factory reset complete' }
+            };
+            
+            const config = actions[action];
+            if (!config) return;
+            
+            if (confirm(config.message)) {
+                if (action === 'factory-reset') {
+                    AppState.documents = [];
+                    AppState.nodes = [];
+                    AppState.edges = [];
+                    AppState.fileHashes = {};
+                    AppState.stats = { documents: 0, nodes: 0, edges: 0, queries: 0, vramUsed: 0, storageUsed: 0, ocrDocs: 0, concepts: 0, similarityEdges: 0 };
+                    AppState.fileCounts = { pdf: 0, docx: 0, code: 0, tns: 0, image: 0, md: 0, tex: 0, ipynb: 0 };
+                    AppState.storage = { vector: 0, graph: 0, ocr: 0, meta: 0 };
+                    
+                    updateStats();
+                    renderDocumentsTable();
+                    updateHashTracking();
+                    
+                    if (previewNetwork) previewNetwork.setData({ nodes: [], edges: [] });
+                    if (fullNetwork) fullNetwork.setData({ nodes: [], edges: [] });
+                }
+                
+                Logger.warning(`Action executed: ${action}`);
+                Toast.success(config.success);
+            }
+        }
+
+        // ============================================
+        // Keyboard Shortcuts
+        // ============================================
+        document.addEventListener('keydown', (e) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+                e.preventDefault();
+                document.getElementById('quick-search').focus();
+            }
+            if (e.key === 'Escape') {
+                closeUploadModal();
+                if (!document.getElementById('debug-panel').classList.contains('translate-y-full')) {
+                    toggleDebugPanel();
+                }
+            }
+        });
+
+        // ============================================
+        // Filter Handlers
+        // ============================================
+        document.getElementById('doc-filter').addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase();
+            const rows = document.querySelectorAll('#documents-tbody tr');
+            rows.forEach(row => {
+                row.style.display = row.textContent.toLowerCase().includes(query) ? '' : 'none';
+            });
+        });
+
+        document.getElementById('doc-type-filter').addEventListener('change', (e) => {
+            const type = e.target.value;
+            const rows = document.querySelectorAll('#documents-tbody tr');
+            rows.forEach(row => {
+                if (type === 'all') {
+                    row.style.display = '';
+                } else {
+                    row.style.display = row.cells[1]?.textContent.toLowerCase().includes(type) ? '' : 'none';
+                }
+            });
+        });
+
+        // ============================================
+        // Navigation
+        // ============================================
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const view = item.dataset.view;
+                if (view) switchView(view);
+            });
+        });
+
+        // ============================================
+        // Initialize
+        // ============================================
+        document.addEventListener('DOMContentLoaded', () => {
+            Logger.info('NeuroGraph v2.0 initializing...');
+            Logger.debug('Loading configuration...');
+            
+            initPreviewGraph();
+            updateStats();
+            
+            setTimeout(() => {
+                Logger.info('System check complete');
+                Logger.success('All systems operational');
+            }, 1000);
+        });
+    </script>
+</body>
+</html>
+
